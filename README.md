@@ -57,6 +57,8 @@ On another host, set these yourself:
 | `NODE_ENV` | `production` |
 | `SECRET` | A long random string. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `DATABASE_URL` | Your Postgres connection string |
+| `GOOGLE_CLIENT_ID` | Optional. Turns on "Continue with Google". From Google Cloud, see below |
+| `GOOGLE_CLIENT_SECRET` | Optional. Goes with the client ID |
 | `CLAUDE_MODEL` | Optional. The Claude model used for live runs. Defaults to `claude-haiku-5-5` |
 
 Build command `npm install`, start command `npm start`.
@@ -64,6 +66,16 @@ Build command `npm install`, start command `npm start`.
 ### 4. Share the link
 
 Open the address your host gives you, create your own account, then share the address.
+
+## Sign in with Google (optional)
+
+1. Open console.cloud.google.com and create a project.
+2. Set up the OAuth consent screen (Google Auth Platform): app name, your support email, audience External.
+3. Create an OAuth client ID of type Web application.
+4. Under Authorised redirect URIs add `https://YOUR-SITE.onrender.com/auth/google/callback` (and `http://localhost:3000/auth/google/callback` for local testing).
+5. Copy the client ID and secret into the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables and redeploy.
+
+The button appears only when both are set. Only the `openid` and `email` scopes are requested, so the site never sees the user's Gmail messages. A user who signs in with Google using the same email as an existing password account is signed in to that same account.
 
 ## Things to know before you share it
 

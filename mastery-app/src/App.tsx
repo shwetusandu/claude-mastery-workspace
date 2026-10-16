@@ -244,11 +244,15 @@ function Account() {
 }
 
 function Gate() {
-  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [msg, setMsg] = useState(""), [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [busy, setBusy] = useState(false), [google, setGoogle] = useState(false);
+  const [msg, setMsg] = useState(() => { try { const m = new URLSearchParams(location.search).get("authError"); if (m) history.replaceState(null, "", location.pathname + location.hash); return m || ""; } catch (e) { return ""; } });
+  useEffect(() => { if (HOSTED) fetch("/api/config").then((r) => r.json()).then((c) => setGoogle(!!c.google)).catch(() => {}); }, []);
   const go = async (kind) => { setBusy(true); try { await st.auth(kind, email, pw); } catch (e) { setMsg(e.message); } setBusy(false); };
   return <Card className="mx-auto mt-[8vh] w-full max-w-md"><CardHeader><Eyebrow>Sign in</Eyebrow><CardTitle className="text-2xl">Claude Mastery Workspace</CardTitle></CardHeader><CardContent className="space-y-4">
     {!env.idDone ? <p className="text-muted-foreground">{HOSTED ? "Loading…" : "Checking your Claude sign-in…"}</p> : HOSTED ? <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); go("login"); }}>
       <p className="text-muted-foreground">Learn Claude by doing, across five levels. Your progress is saved to your account.</p>
+      {google && <><Button asChild variant="outline" className="w-full"><a href="/auth/google"><svg viewBox="0 0 48 48" className="mr-2 h-4 w-4" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.5z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</a></Button>
+        <div className="flex items-center gap-3 text-[13px] text-muted-foreground"><Separator className="flex-1" />or use email<Separator className="flex-1" /></div></>}
       <Field id="au-email" label="Email"><Input id="au-email" autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
       <Field id="au-pw" label="Password"><Input id="au-pw" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>{msg && <Note tone="bad">{msg}</Note>}
       <div className="flex gap-2"><Button type="submit" disabled={busy}>Log in</Button><Button type="button" variant="outline" disabled={busy} onClick={() => go("signup")}>Create account</Button></div>

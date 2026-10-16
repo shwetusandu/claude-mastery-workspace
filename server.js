@@ -11,6 +11,8 @@ if (!SECRET) {
   SECRET = crypto.randomBytes(32).toString("hex");
   console.warn("No SECRET set: using a temporary one. Sign-ins and saved API keys will not survive a restart.");
 }
+const G_ID = process.env.GOOGLE_CLIENT_ID || "", G_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+const BASE_URL = (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/$/, "");
 const ENC_KEY = crypto.createHash("sha256").update(SECRET + ":apikey").digest();
 
 /* ---------- storage: Postgres when DATABASE_URL is set, otherwise a JSON file ---------- */
@@ -83,10 +85,12 @@ async function api(req, res, url) {
       return send(res, 200, { email, hasKey: false }, { "set-cookie": cookie(makeToken(email), 2592000) });
     }
     const u = await store.get(email);
+    if (u && !u.hash) return send(res, 401, { error: "This account uses Google sign-in. Choose Continue with Google." });
     const ok = u && crypto.timingSafeEqual(Buffer.from(hashPw(pw, u.salt)), Buffer.from(u.hash));
     if (!ok) return send(res, 401, { error: "Email or password is incorrect." });
     return send(res, 200, { email, hasKey: !!u.key }, { "set-cookie": cookie(makeToken(email), 2592000) });
   }
+  if (p === "/api/config") return send(res, 200, { google: !!(G_ID && G_SECRET) });
   if (p === "/api/logout") return send(res, 200, { ok: true }, { "set-cookie": cookie("", 0) });
 
   const tok = (req.headers.cookie || "").split(/;\s*/).map(c => c.split("=")).find(c => c[0] === "session");
@@ -124,11 +128,48 @@ async function api(req, res, url) {
   send(res, 404, { error: "Not found." });
 }
 
+
+/* ---------- Sign in with Google (OAuth 2.0 authorization code flow) ---------- */
+const cookieGet = (req, name) => { const c = (req.headers.cookie || "").split(/;\s*/).find(x => x.startsWith(name + "=")); return c ? c.slice(name.length + 1) : ""; };
+const redirectUri = req => (BASE_URL || `${PROD ? "https" : "http"}://${req.headers.host}`) + "/auth/google/callback";
+function redirect(res, to, cookies) { res.writeHead(302, Object.assign({ location: to, "cache-control": "no-store" }, cookies ? { "set-cookie": cookies } : {})); res.end(); }
+const back = (res, msg) => redirect(res, "/?authError=" + encodeURIComponent(msg), [`gstate=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${PROD ? "; Secure" : ""}`]);
+async function googleAuth(req, res, url) {
+  if (!G_ID || !G_SECRET) return back(res, "Google sign-in is not set up on this site.");
+  if (url.pathname === "/auth/google") {
+    const state = crypto.randomBytes(24).toString("base64url");
+    const q = new URLSearchParams({ client_id: G_ID, redirect_uri: redirectUri(req), response_type: "code", scope: "openid email", state, prompt: "select_account" });
+    return redirect(res, "https://accounts.google.com/o/oauth2/v2/auth?" + q, [`gstate=${state}; HttpOnly; Path=/; SameSite=Lax; Max-Age=600${PROD ? "; Secure" : ""}`]);
+  }
+  const state = url.searchParams.get("state") || "", saved = cookieGet(req, "gstate");
+  if (url.searchParams.get("error")) return back(res, "Google sign-in was cancelled.");
+  if (!saved || state.length !== saved.length || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(saved))) return back(res, "Google sign-in expired. Try again.");
+  if (limited("auth:" + ip(req), 10, 15 * 6e4)) return back(res, "Too many attempts. Wait 15 minutes and try again.");
+  let tok;
+  try {
+    const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ code: url.searchParams.get("code") || "", client_id: G_ID, client_secret: G_SECRET, redirect_uri: redirectUri(req), grant_type: "authorization_code" }), signal: AbortSignal.timeout(15000) });
+    tok = await r.json(); if (!r.ok || !tok.id_token) throw new Error(tok.error || "no id_token");
+  } catch (e) { console.error("Google token exchange failed:", e.message); return back(res, "Google sign-in failed. Try again."); }
+  // The ID token came straight from Google's token endpoint over TLS, so its claims can be read without a separate signature check.
+  let claims; try { claims = JSON.parse(Buffer.from(tok.id_token.split(".")[1], "base64url").toString()); } catch (e) { return back(res, "Google sign-in failed. Try again."); }
+  const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (!aud.includes(G_ID) || !/^(https:\/\/)?accounts\.google\.com$/.test(claims.iss || "") || (claims.exp || 0) * 1000 < Date.now()) return back(res, "Google sign-in could not be verified.");
+  if (!claims.email || claims.email_verified !== true) return back(res, "Your Google account email is not verified.");
+  const email = String(claims.email).toLowerCase();
+  let u = await store.get(email);
+  if (!u) { u = { email, salt: null, hash: null, google: claims.sub, key: null, state: "", updated: 0, created: Date.now() }; if (!(await store.create(u))) u = await store.get(email); }
+  if (u.google && u.google !== claims.sub) return back(res, "This email is linked to a different Google account.");
+  if (!u.google) { u.google = claims.sub; await store.put(u); }
+  return redirect(res, "/", [cookie(makeToken(email), 2592000), `gstate=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${PROD ? "; Secure" : ""}`]);
+}
+
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   try {
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
+    if (url.pathname === "/auth/google" || url.pathname === "/auth/google/callback") return await googleAuth(req, res, url);
     if (url.pathname === "/healthz") return send(res, 200, { ok: true });
     const name = url.pathname === "/" ? "index.html" : path.basename(url.pathname);
     const f = path.join(__dirname, "public", name);
