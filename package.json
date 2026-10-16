@@ -1,0 +1,10 @@
+{
+  "name": "claude-mastery-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hands-on training workspace for mastering Claude, with accounts and per-user API keys.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "pg": "^8.11.3" }
+}

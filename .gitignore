@@ -1,0 +1,7 @@
+node_modules
+data
+.env
+dist
+bundle.html
+claude-mastery-artifact.html
+.parcel-cache

@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Layout: a workbench. Slim top bar, pinned next-action strip, one working view at a time. Five levels carry a five-step orange ramp. */
+:root {
+  --background: 210 13% 97%; --foreground: 213 14% 12%;
+  --card: 0 0% 100%; --card-foreground: 213 14% 12%;
+  --popover: 0 0% 100%; --popover-foreground: 213 14% 12%;
+  --primary: 17 87% 45%; --primary-foreground: 0 0% 100%;
+  --secondary: 216 12% 93%; --secondary-foreground: 213 14% 12%;
+  --muted: 216 12% 93%; --muted-foreground: 216 10% 40%;
+  --accent: 21 88% 94%; --accent-foreground: 17 87% 34%;
+  --destructive: 3 71% 41%; --destructive-foreground: 0 0% 100%;
+  --border: 218 12% 87%; --input: 218 12% 80%; --ring: 17 87% 45%; --radius: 0.4rem;
+  --ok: 150 59% 30%; --ok-soft: 150 43% 92%; --warn: 42 100% 27%; --warn-soft: 45 85% 90%;
+  --bad: 3 71% 41%; --bad-soft: 4 74% 94%; --info: 215 59% 41%; --info-soft: 215 65% 93%;
+  --l1: 30 85% 65%; --l2: 26 84% 58%; --l3: 23 79% 51%; --l4: 19 84% 44%; --l5: 17 87% 35%;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --background: 214 15% 9%; --foreground: 216 12% 93%;
+  --card: 216 15% 13%; --card-foreground: 216 12% 93%;
+  --popover: 216 15% 13%; --popover-foreground: 216 12% 93%;
+  --primary: 21 100% 65%; --primary-foreground: 23 68% 6%;
+  --secondary: 215 14% 17%; --secondary-foreground: 216 12% 93%;
+  --muted: 215 14% 17%; --muted-foreground: 215 11% 66%;
+  --accent: 23 45% 16%; --accent-foreground: 21 100% 72%;
+  --destructive: 4 79% 71%; --destructive-foreground: 23 68% 6%;
+  --border: 216 12% 23%; --input: 216 12% 30%; --ring: 21 100% 65%;
+  --ok: 151 47% 58%; --ok-soft: 152 38% 15%; --warn: 44 73% 63%; --warn-soft: 43 45% 16%;
+  --bad: 4 79% 71%; --bad-soft: 3 37% 17%; --info: 216 74% 74%; --info-soft: 216 41% 18%;
+  --l1: 31 86% 71%; --l2: 27 87% 64%; --l3: 23 85% 57%; --l4: 18 76% 53%; --l5: 17 73% 45%;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --background: 214 15% 9%; --foreground: 216 12% 93%;
+  --card: 216 15% 13%; --card-foreground: 216 12% 93%;
+  --popover: 216 15% 13%; --popover-foreground: 216 12% 93%;
+  --primary: 21 100% 65%; --primary-foreground: 23 68% 6%;
+  --secondary: 215 14% 17%; --secondary-foreground: 216 12% 93%;
+  --muted: 215 14% 17%; --muted-foreground: 215 11% 66%;
+  --accent: 23 45% 16%; --accent-foreground: 21 100% 72%;
+  --destructive: 4 79% 71%; --destructive-foreground: 23 68% 6%;
+  --border: 216 12% 23%; --input: 216 12% 30%; --ring: 21 100% 65%;
+  --ok: 151 47% 58%; --ok-soft: 152 38% 15%; --warn: 44 73% 63%; --warn-soft: 43 45% 16%;
+  --bad: 4 79% 71%; --bad-soft: 3 37% 17%; --info: 216 74% 74%; --info-soft: 216 41% 18%;
+  --l1: 31 86% 71%; --l2: 27 87% 64%; --l3: 23 85% 57%; --l4: 18 76% 53%; --l5: 17 73% 45%;
+  color-scheme: dark }
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 15px; line-height: 1.5; }
+  h1, h2, h3 { font-family: "Bricolage Grotesque", "Trebuchet MS", sans-serif; text-wrap: balance; line-height: 1.15; }
+}
