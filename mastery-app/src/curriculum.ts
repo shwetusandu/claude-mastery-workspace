@@ -149,6 +149,10 @@ const README=[
   ["Features","Web search, Research, Artifacts, code execution, files and images, Projects, Google connectors, tasks and Claude Code: what each does, how to start it, who has it and its limits."],
   ["Goal guide","What you want to do, how to ask, an example, and the skill that practises it."],
   ["Sources","Every fact links to the Anthropic page it came from, with the date it was checked."]]],
+ ["connect","Connect tools","Step-by-step guides for connecting Claude to Gmail, Google Calendar and Drive, Microsoft 365, Slack, Notion, GitHub, Telegram and any other tool. Nothing here is scored.",[
+  ["Basics","How to find, connect, switch on and disconnect any connector, and what Claude can reach once connected."],
+  ["One card per tool","Who can use it, what Claude can do, the setup steps, what needs your approval, limits, an example request to try, and the official source."],
+  ["Telegram","Works through Claude Code on your own computer rather than as a connector in the Claude app; the card explains the difference."]]],
  ["scheduler","Scheduler","A reference page explaining Claude's scheduled tasks. Nothing here is scored.",[
   ["The basics","Who can use scheduled tasks, where they run, what a run can use and what it remembers."],
   ["Create one and Manage it","The steps inside Claude to set up, review, pause or delete a task."],
@@ -218,4 +222,53 @@ const FEATURES={
  sources:[["Claude Opus 5.5 overview","https://platform.claude.com/docs/en/models/opus-5-5/overview"],["Claude Sonnet 5.5 overview","https://platform.claude.com/docs/en/models/sonnet-5-5/overview"],["Introducing Claude Sonnet 5.5","https://www.anthropic.com/claude-sonnet-5-5"],["Claude Haiku 5.5 overview","https://platform.claude.com/docs/en/models/haiku-5-5/overview"],["Change the model, effort, and thinking settings","https://support.claude.com/en/articles/8664678-change-the-model-effort-and-thinking-settings"],["When should I use web search, extended thinking, and research?","https://support.claude.com/en/articles/11095361-when-should-i-use-web-search-extended-thinking-and-research"]]
 };
 
-export {CHECKS,SKILL_RUBRIC,LEVELS_OF,CRITICAL,LEVELS,PROJECTS,CAPSTONE,ALL,README,SCHED,FEATURES};
+// CONNECT: tool walkthroughs, checked against official pages on 18 October 2026.
+const CONNECT={
+ checked:"18 October 2026",
+ basics:[
+  ["Find a connector","In a chat, choose + (or type /), hover over Connectors, choose Manage connectors, then Browse connectors. You can also open Customize > Connectors."],
+  ["Connect it","Choose the connector, read what it can do, choose Connect, and sign in to that service when asked."],
+  ["Turn it on for a chat","Choose + > Connectors and switch on only the tools this chat needs."],
+  ["Disconnect","Customize > Connectors, choose the service, then Disconnect. Disconnect anything you no longer use."],
+  ["What Claude can reach","Only what your own account in that service can reach. Connecting lets Claude read and possibly change that data."],
+  ["Work accounts","On Team and Enterprise plans an Owner must add or enable a connector first; then each person connects their own account."]],
+ tools:[
+  {name:"Gmail, Google Calendar and Drive",who:"All users. Team and Enterprise: an Owner enables them first.",can:["Gmail: search and read email, draft messages, manage labels and threads","Calendar: view, create, update and delete events, find shared free time","Drive: search and read files, create folders, upload files and save files Claude makes"],
+   steps:["Ask Claude something that needs the data, for example about today's meetings.","Sign in with your Google account when asked.","Switch each one on or off under + > Connectors.","To attach a Drive file, choose + > Add from Google Drive."],
+   approval:"Sending, replying and forwarding email, and sharing, moving or deleting Drive files ask for your approval by default.",
+   limits:"Claude sees attachment details but not attachment content in Gmail, and reads only the text of Drive files, not images inside them.",
+   practice:"Summarise the unread emails from my manager this week in 5 bullets. Do not reply to or move anything.",src:[["Use Google Workspace connectors","https://support.claude.com/en/articles/10166901-use-google-workspace-connectors"]]},
+  {name:"Microsoft 365 (Outlook, OneDrive, SharePoint, Teams)",who:"Free, Pro, Max, Team and Enterprise, but only with a Microsoft work or school account on a Microsoft Business plan. Personal Microsoft accounts cannot connect.",can:["Outlook: search and read email and calendars","OneDrive and SharePoint: read Word, Excel, PowerPoint, PDF and text files","Teams: read chats, channel messages and meeting transcripts"],
+   steps:["A Microsoft administrator for your organisation gives one-time consent (on Team and Enterprise, a Claude Owner also enables it in Organization settings > Connectors).","Go to Customize > Connectors and choose Microsoft 365.","Choose Connect and sign in with your work account."],
+   approval:"It is read-only by default. Sending email, changing files or posting in Teams only works if an administrator turns on the write tools.",
+   limits:"OneNote files cannot be read, and email moved to the Online Archive is not searched.",
+   practice:"Find the latest version of the Q3 budget in SharePoint and list the three biggest changes from the previous version.",src:[["Set up the Microsoft 365 connector","https://support.claude.com/en/articles/12542951-set-up-the-microsoft-365-connector"]]},
+  {name:"Slack",who:"Team and Enterprise plans, according to Anthropic's Slack page. A Slack admin must approve the Claude app for the workspace first.",can:["Search your workspace's channels, direct messages and files to answer questions","The connector's listing also shows tools for sending messages and working with canvases"],
+   steps:["A Slack admin installs the Claude app for the workspace.","A Claude Owner enables the Slack connector in Organization settings > Connectors.","You go to Customize > Connectors, find Slack and choose Connect.","In a chat, choose + > Connectors and switch Slack on."],
+   approval:"It reaches only what your own Slack account can see. Turn it on only in chats that need it.",
+   limits:"Anthropic now also offers Claude Tag, which puts one shared Claude inside Slack; that is set up by an admin and is separate from this connector. Anthropic's Slack page describes the earlier per-user app, so screens may differ.",
+   practice:"What did the team decide about the launch date in #product-planning last week? Quote the message and link it.",src:[["Slack integration (Claude docs)","https://claude.com/docs/connectors/slack"],["Slack connector listing","https://claude.com/connectors/slack"]]},
+  {name:"Notion",who:"Listed in the Connectors Directory and marked Anthropic verified. The listing does not say which plans include it.",can:["Search and read pages and databases","Create, update, move and duplicate pages","Create and update databases, and read or add comments"],
+   steps:["Open the Connectors Directory (+ > Connectors > Manage connectors > Browse connectors).","Choose Notion, then Connect.","Sign in to Notion and choose which workspace to allow.","Switch Notion on in a chat under + > Connectors."],
+   approval:"It can change pages, so start with read-only requests and check each change it proposes.",
+   limits:"Notion builds and maintains this connector, so its tools can change without notice from Anthropic.",
+   practice:"Read my Notion page 'Project Alpha' and list every task without an owner. Do not edit the page.",src:[["Notion connector listing","https://claude.com/marketplace/connectors/notion"],["Use the Connectors Directory","https://support.claude.com/en/articles/11724452-use-the-connectors-directory-to-extend-claude-s-capabilities"]]},
+  {name:"GitHub",who:"Anthropic's article does not list plans; connect it from your connectors.",can:["Add files or folders from a repository to a chat or project as context","Claude reads the files of the branch you choose"],
+   steps:["In a chat, choose + > Add from GitHub (or, in a project, + in the knowledge section, then GitHub).","Sign in to GitHub if asked.","Pick the repository, branch and files to include.","In a project, use Sync to pull in later changes."],
+   approval:"It reads code; the article describes no way for it to change your repository. For private repositories you grant access through GitHub.",
+   limits:"It does not bring in commit history or pull requests, and the files must fit in Claude's context. To have Claude change code, use Claude Code (skill 3.9).",
+   practice:"From the attached repository, explain how sign-up works, file by file, and list anything that looks unsafe.",src:[["Use the GitHub integration","https://support.claude.com/en/articles/10167454-use-the-github-integration"]]},
+  {name:"Telegram (through Claude Code)",who:"Claude Code users signed in with a Claude account or a Console API key. Pro and Max users can use it directly; Team and Enterprise need an Owner to enable channels. It is a research preview.",can:["Message your bot from your phone and Claude, running on your computer, answers in the same chat","Claude works on your real files while you are away from the keyboard"],
+   steps:["In Telegram, open BotFather, send /newbot, and copy the token it gives you.","Install Bun, which the plugin needs.","Start Claude Code (claude) and run: /plugin install telegram@claude-plugins-official","Run: /telegram:configure <your token>","Restart with: claude --channels plugin:telegram@claude-plugins-official","Message your bot; it replies with a pairing code. In Claude Code run /telegram:access pair <code>, then /telegram:access policy allowlist so only you can use it."],
+   approval:"Only paired accounts can send messages. Anyone you allowlist can also approve or deny Claude's actions, so pair only yourself. If Claude needs permission while you are away, the session waits.",
+   limits:"Messages arrive only while that Claude Code session is running on your computer. This is not a connector in the Claude app. Discord and iMessage work the same way.",
+   practice:"(Sent from Telegram) Check whether last night's test run in my project failed, and reply with the first error only.",src:[["Push events into a running session with channels","https://code.claude.com/docs/en/channels"]]},
+  {name:"Any other tool: custom connector (MCP)",who:"Free, Pro, Max, Team and Enterprise. Free accounts can add one.",can:["Connect any service that offers a remote MCP server address","Claude can read and act in that service within the permissions you grant"],
+   steps:["Go to Customize > Connectors.","Choose + Add, then Add custom connector.","Enter a name and the server address (URL), then Continue.","Choose how to sign in, then Add."],
+   approval:"Anthropic does not check custom connectors. Use only servers from organisations you trust, refuse permissions that look unnecessary, and choose Allow always only for tools you trust.",
+   limits:"The server must be reachable on the public internet. To change a connector you remove it and add it again.",
+   practice:"Using the new connector, list what tools it offers and what each would let you change, before using any of them.",src:[["Get started with custom connectors using remote MCP","https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"]]}],
+ sources:[["Use connectors to extend Claude's capabilities","https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities"],["Use the Connectors Directory","https://support.claude.com/en/articles/11724452-use-the-connectors-directory-to-extend-claude-s-capabilities"]]
+};
+
+export {CHECKS,SKILL_RUBRIC,LEVELS_OF,CRITICAL,LEVELS,PROJECTS,CAPSTONE,ALL,README,SCHED,FEATURES,CONNECT};

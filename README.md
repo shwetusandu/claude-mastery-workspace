@@ -75,7 +75,7 @@ Open the address your host gives you, create your own account, then share the ad
 4. Under Authorised redirect URIs add `https://YOUR-SITE.onrender.com/auth/google/callback` (and `http://localhost:3000/auth/google/callback` for local testing).
 5. Copy the client ID and secret into the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables and redeploy.
 
-The button appears only when both are set. Only the `openid` and `email` scopes are requested, so the site never sees the user's Gmail messages. A user who signs in with Google using the same email as an existing password account is signed in to that same account.
+Once both are set, the sign-in page shows only "Continue with Google". Without them it falls back to email and password. Only the `openid` and `email` scopes are requested, so the site never sees the user's Gmail messages. A user who signs in with Google using the same email as an existing password account is signed in to that same account.
 
 ## Things to know before you share it
 

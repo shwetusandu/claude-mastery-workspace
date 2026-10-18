@@ -16,11 +16,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { LEVELS, PROJECTS, CAPSTONE, SKILL_RUBRIC, LEVELS_OF, CRITICAL, ALL, README, SCHED, FEATURES } from "./curriculum";
+import { LEVELS, PROJECTS, CAPSTONE, SKILL_RUBRIC, LEVELS_OF, CRITICAL, ALL, README, SCHED, FEATURES, CONNECT } from "./curriculum";
 import * as st from "./store";
 import { S, env, STATUS, HOSTED, byId, sk, pj, cap, statusOf, levelDone, levelOpen, allDone, mastered, curLevel, commit, log, today } from "./store";
 
-const TABS = [["home", "Dashboard"], ["path", "Learning Path"], ["lab", "Practice Lab"], ["projects", "Projects"], ["skills", "Skills"], ["evidence", "Evidence"], ["features", "Features"], ["scheduler", "Scheduler"], ["readme", "Readme"], ["account", "Account"]];
+const TABS = [["home", "Dashboard"], ["path", "Learning Path"], ["lab", "Practice Lab"], ["projects", "Projects"], ["skills", "Skills"], ["evidence", "Evidence"], ["features", "Features"], ["connect", "Connect tools"], ["scheduler", "Scheduler"], ["readme", "Readme"], ["account", "Account"]];
 const TONE = { ok: "bg-ok-soft text-ok border-ok/30", bad: "bg-bad-soft text-bad border-bad/30", warn: "bg-warn-soft text-warn border-warn/30", info: "bg-info-soft text-info border-info/30" };
 const ST_TONE = ["bg-muted text-muted-foreground", "bg-info-soft text-info", "bg-warn-soft text-warn", "bg-accent text-accent-foreground", "bg-ok-soft text-ok"];
 const ST_DOT = ["bg-border", "bg-info", "bg-warn", "bg-primary", "bg-ok"];
@@ -206,6 +206,25 @@ function Scheduler({ open }) {
       <p className="text-[13px] text-muted-foreground">Source: Anthropic's help article "Schedule recurring tasks in Claude Cowork", read on 11 October 2026. Features and plan availability change; check the Claude Help Center for the current details. This page explains the feature; it does not create scheduled tasks.</p></CardContent></Card></>;
 }
 
+function Connect({ open }) {
+  const C = CONNECT, o = levelOpen(3);
+  return <><Head eyebrow="Guides" title="Connect Claude to your tools"><p className="max-w-[68ch] pt-1 text-muted-foreground">How to give Claude access to the apps you already use, what it can then do, and what to watch. Checked against official pages on {C.checked}; menus change, so follow the source link if your screen looks different.</p></Head>
+    <Card><CardHeader><CardTitle className="text-lg">How connecting works</CardTitle></CardHeader><CardContent><Rows rows={C.basics} /></CardContent></Card>
+    <Accordion type="multiple" defaultValue={[C.tools[0].name]} className="space-y-3">{C.tools.map((t) => <AccordionItem key={t.name} value={t.name} className="rounded-lg border bg-card px-4">
+      <AccordionTrigger className="text-left hover:no-underline"><span className="font-display text-[17px] font-bold">{t.name}</span></AccordionTrigger>
+      <AccordionContent className="space-y-4 text-[15px]">
+        <p><b>Who can use it:</b> {t.who}</p>
+        <div className="grid gap-4 md:grid-cols-2"><div><Eyebrow>What Claude can do</Eyebrow><ul className="mt-1 list-disc space-y-1 pl-5 text-sm">{t.can.map((x) => <li key={x}>{x}</li>)}</ul></div>
+          <div><Eyebrow>Set it up</Eyebrow><ol className="mt-1 list-decimal space-y-1 pl-5 text-sm">{t.steps.map((x) => <li key={x} className="break-words">{x}</li>)}</ol></div></div>
+        <Note tone="warn"><b>Approval and safety:</b> {t.approval}</Note>
+        <p className="text-sm"><b>Limits:</b> {t.limits}</p>
+        <div className="space-y-1.5"><Eyebrow>Try it (example request)</Eyebrow><Quote>{t.practice}</Quote></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">{t.src.map((s) => <a key={s[1]} href={s[1]} target="_blank" rel="noreferrer" className="text-info underline underline-offset-2">{s[0]}</a>)}</span>
+          <Button size="sm" variant="outline" disabled={!o} onClick={() => open(t.name.startsWith("Telegram") ? "3.9" : "3.8")}>{o ? `Practise ${t.name.startsWith("Telegram") ? "3.9" : "3.8"}` : "Unlocks at Level 3"}</Button></div>
+      </AccordionContent></AccordionItem>)}</Accordion>
+    <Card><CardHeader><CardTitle className="text-lg">General sources</CardTitle><CardDescription>Checked on {C.checked}. Each tool lists its own source above. The example requests are written for this workspace, not quoted from Anthropic.</CardDescription></CardHeader><CardContent><ul className="list-disc space-y-1 pl-5 text-sm">{C.sources.map((s) => <li key={s[1]}><a href={s[1]} target="_blank" rel="noreferrer" className="text-info underline underline-offset-2">{s[0]}</a></li>)}</ul></CardContent></Card></>;
+}
+
 function Features({ open, go }) {
   const F = FEATURES, A = ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-info underline underline-offset-2">{children}</a>;
   const Try = ({ id }) => { const s = byId(id), o = levelOpen(s.level); return <Button size="sm" variant="outline" disabled={!o} onClick={() => open(id)}>{o ? `Practise ${id}` : `${id} locked`}</Button>; };
@@ -244,19 +263,21 @@ function Account() {
 }
 
 function Gate() {
-  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [busy, setBusy] = useState(false), [google, setGoogle] = useState(false);
+  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [busy, setBusy] = useState(false), [google, setGoogle] = useState(HOSTED ? null : false);
   const [msg, setMsg] = useState(() => { try { const m = new URLSearchParams(location.search).get("authError"); if (m) history.replaceState(null, "", location.pathname + location.hash); return m || ""; } catch (e) { return ""; } });
-  useEffect(() => { if (HOSTED) fetch("/api/config").then((r) => r.json()).then((c) => setGoogle(!!c.google)).catch(() => {}); }, []);
+  useEffect(() => { if (HOSTED) fetch("/api/config").then((r) => r.json()).then((c) => setGoogle(!!c.google)).catch(() => setGoogle(false)); }, []);
   const go = async (kind) => { setBusy(true); try { await st.auth(kind, email, pw); } catch (e) { setMsg(e.message); } setBusy(false); };
   return <Card className="mx-auto mt-[8vh] w-full max-w-md"><CardHeader><Eyebrow>Sign in</Eyebrow><CardTitle className="text-2xl">Claude Mastery Workspace</CardTitle></CardHeader><CardContent className="space-y-4">
-    {!env.idDone ? <p className="text-muted-foreground">{HOSTED ? "Loading…" : "Checking your Claude sign-in…"}</p> : HOSTED ? <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); go("login"); }}>
-      <p className="text-muted-foreground">Learn Claude by doing, across five levels. Your progress is saved to your account.</p>
-      {google && <><Button asChild variant="outline" className="w-full"><a href="/auth/google"><svg viewBox="0 0 48 48" className="mr-2 h-4 w-4" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.5z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</a></Button>
-        <div className="flex items-center gap-3 text-[13px] text-muted-foreground"><Separator className="flex-1" />or use email<Separator className="flex-1" /></div></>}
+    {!env.idDone || (HOSTED && google === null) ? <p className="text-muted-foreground">{HOSTED ? "Loading…" : "Checking your Claude sign-in…"}</p> : HOSTED ? (google ? <div className="space-y-4">
+      <p className="text-muted-foreground">Learn Claude by doing, across five levels. Sign in with Google to save your progress.</p>
+      {msg && <Note tone="bad">{msg}</Note>}
+      <Button asChild className="w-full"><a href="/auth/google"><svg viewBox="0 0 48 48" className="mr-2 h-4 w-4" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.5z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</a></Button>
+      <p className="text-[13px] text-muted-foreground">We only receive your email address from Google, to keep your progress in your account.</p></div>
+    : <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); go("login"); }}>
+      <Note tone="warn">Google sign-in is not set up on this site yet, so email sign-in is shown instead.</Note>
       <Field id="au-email" label="Email"><Input id="au-email" autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
       <Field id="au-pw" label="Password"><Input id="au-pw" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>{msg && <Note tone="bad">{msg}</Note>}
-      <div className="flex gap-2"><Button type="submit" disabled={busy}>Log in</Button><Button type="button" variant="outline" disabled={busy} onClick={() => go("signup")}>Create account</Button></div>
-      <p className="text-[13px] text-muted-foreground">New here? Enter an email and a password of at least 8 characters, then choose Create account. There is no password reset, so keep your password safe.</p></form>
+      <div className="flex gap-2"><Button type="submit" disabled={busy}>Log in</Button><Button type="button" variant="outline" disabled={busy} onClick={() => go("signup")}>Create account</Button></div></form>)
     : env.me ? <><Note tone="ok">Signed in through Claude{env.me.name && <> as <b>{env.me.name}</b></>}. Your progress is saved to your account and is private to you.</Note><Button onClick={() => st.enter(true)}>Enter workspace</Button></>
     : <><Note tone="warn">You are not signed in to Claude, or this page cannot see your sign-in.</Note><p className="text-sm">This workspace uses your Claude sign-in. It has no separate username or password. To keep progress across devices, sign in to Claude in this browser and reopen the page.</p><Button onClick={() => st.enter(true)}>Continue as guest</Button><p className="text-[13px] text-muted-foreground">As a guest, progress is kept only in this browser and live Claude features are off.</p></>}
   </CardContent></Card>;
@@ -283,7 +304,7 @@ export default function App() {
     <main className="flex flex-col gap-5">
       {tab === "home" && <Home />}{tab === "path" && <Path open={open} go={go} />}{tab === "lab" && <Lab skill={skill} stage={stage} setStage={setStage} open={open} />}
       {tab === "projects" && <Projects open={open} />}{tab === "skills" && <Skills open={open} />}{tab === "evidence" && <Evidence />}
-      {tab === "features" && <Features open={open} go={go} />}{tab === "scheduler" && <Scheduler open={open} />}{tab === "readme" && <Readme go={go} />}{tab === "account" && <Account />}
+      {tab === "connect" && <Connect open={open} />}{tab === "features" && <Features open={open} go={go} />}{tab === "scheduler" && <Scheduler open={open} />}{tab === "readme" && <Readme go={go} />}{tab === "account" && <Account />}
     </main>
   </div>;
 }
