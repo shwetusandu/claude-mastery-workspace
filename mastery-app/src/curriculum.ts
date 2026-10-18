@@ -32,12 +32,12 @@ const CHECKS={
  doc:[/(checklist|document|readme|instructions|runbook|guide|changelog|version|how to use)/,"Covers documentation","Ask for or include usage notes and a version."]
 };
 const SKILL_RUBRIC=[
-["Correctness",25,"Is everything in the output true and does it do exactly what you asked?","Check every fact, name, number and date against your source. One uncorrected error means Partly at best."],
-["Output quality",20,"Is it complete, well organised and ready to use without editing?","Count the edits you would make before using it. None is Yes; a few small ones is Mostly; a rewrite is Barely."],
+["Correctness",25,"Is everything in the output true and does it do exactly what you asked?","Check every fact, name, number and date against your source. Answer No if anything is wrong that you would have to fix."],
+["Output quality",20,"Is it complete, well organised and ready to use without editing?","Yes if you would need only small edits at most; No if it needs a rewrite."],
 ["Clarity of instructions",15,"Could a stranger paste your prompt and get the same kind of result?","Reread your prompt as if you knew nothing about the task. Anything you had to already know is a gap."],
-["Reliability",15,"Does the prompt work again on different input?","Run it on a second and a third input. Good three times is Yes; twice is Mostly; once is Partly."],
+["Reliability",15,"Does the prompt work again on different input?","Run it again on a second, different input. Yes if that answer is good too."],
 ["Limits and errors",10,"Does it cope when information is missing or the input is bad?","Try it once with something missing. If Claude says so instead of guessing, that is Yes."],
-["Practical usefulness",15,"Would you really send, publish or use this output?","If you would use it today for real work, Yes. If it is only good as a draft, Partly."]];
+["Practical usefulness",15,"Would you really send, publish or use this output?","Yes if you would use it today for real work; No if it is only a rough draft."]];
 const LEVELS_OF=[[1,"Yes, fully"],[.8,"Mostly, small gaps"],[.5,"Partly"],[.2,"Barely"],[0,"No"]];
 const CRITICAL=["Correctness: the output contains an error I could not fix","Privacy: personal or confidential data was exposed or mishandled","Safety: the output could cause harm if used as is"];
 // skill: [id,name,objective,weak,strong,why,guidedTask,starter,guidedChecks,challenge,challengeChecks,hint,solution]
@@ -100,7 +100,55 @@ const PROJECTS=[
 const CAPSTONE={title:"Final Claude Mastery Challenge",problem:"A 15-person training company receives about 120 course enquiries a week by email and web form. Replies take 2 days, a third of enquiries are never answered, and the two coordinators copy details into a spreadsheet by hand. The owner wants faster, consistent replies and a weekly view of demand, but will not allow anything to be sent to a customer without a person seeing it, and customer details must stay protected. You have sample enquiries (write 10 realistic ones yourself), their course list, and one week.",
 steps:[["Understand and define the problem",10,["4.1","4.2","2.6"]],["Select appropriate Claude capabilities",10,["3.3","3.4","1.7"]],["Design the solution",10,["3.2","5.2","4.3"]],["Build the deliverable or workflow",15,["2.5","3.5","5.3","5.1"]],["Test against defined scenarios",15,["2.7","4.5","3.6"]],["Identify limitations and risks",10,["1.6","3.7","5.6"]],["Improve using test results",10,["1.4","5.5"]],["Document the final result",10,["5.7","4.4"]],["Demonstrate practical value",10,["4.6","4.7","5.8"]]]};
 
+
+// SCENES: the use case shown in "Learn & practise" for each skill: [situation, what the weak prompt typically gets, what the better prompt gets].
+// These are illustrations written for this workspace, not recorded Claude outputs.
+const SCENES={
+"1.1":["Meera's sales team missed Monday's planning meeting and needs to know what changed.","A long recap in meeting order. Nobody can see what affects their accounts or who owns what.","Five bullets on what changed, then owners and dates. The team can act on it in a minute."],
+"1.2":["Priya runs a 6-person bakery. A birthday cake arrived a day late and the customer is upset.","A polite but generic apology with no refund details, in the wrong voice, possibly promising things Priya can't give.","A warm reply in the owner's voice that explains the delivery refund and offers 15% off, under 120 words."],
+"1.3":["Arjun is naming a reusable water bottle brand and wants catchy, easy names.","A long mixed list: puns, made-up spellings, three-word names, some already-famous brands.","Eight two-word names in the same style as the examples, each with a short reason."],
+"1.4":["Claude wrote a product description that is too long and too formal.","\"Make it better\" gets a different but equally vague version. Claude has to guess what was wrong.","The same structure, cut to 100 words, opening with the order number, in a friendly tone."],
+"1.5":["Kavya must list every payment deadline in a 30-page supplier contract.","General impressions of the contract. Some dates are missing and none can be checked.","A table of every deadline with clause numbers and the exact sentence quoted, gaps marked \"not stated\"."],
+"1.6":["Rahul is about to forward an article full of statistics to his manager.","A yes-or-no verdict with no way to see which claims were checked.","Each claim marked supported, unsupported or needs a source, with the supporting line quoted."],
+"1.7":["Neha wants a summary of a competitor's pricing change announced yesterday.","Claude may not know about yesterday's announcement and may fill the gap with a confident guess.","A summary built only from the press release Neha pasted, missing details flagged, dates left for her to check."],
+"1.8":["Sam has two jobs tomorrow: a careful contract review and tagging 200 support tickets.","The biggest model for everything: slower, uses limits faster, and no better at simple tagging.","A careful model at high effort for the contract and a fast model for the tickets, each with a reason."],
+"1.9":["Divya needs today's import duty on laptops for a quote to a client.","An answer from memory that may be out of date, with no source to check.","A current rate from official sources, every figure linked and dated, any disagreement shown."],
+"2.1":["A food-truck owner wants a launch plan for a new loyalty card.","A long essay of ideas with no timeline and no owners.","A one-page plan: goal, a week-by-week table, owners and risks."],
+"2.2":["A product manager has 50 survey answers and must decide what to fix before renewals.","A general summary: \"customers are mostly happy but some have concerns\".","Themes counted and ranked, the top 3 renewal risks, and one real quote as proof for each."],
+"2.3":["A shop owner wants the average order value per month from a sales spreadsheet.","An estimated average that may be wrong, with no way to check it.","Exact monthly averages computed with code, the code shown, rows with missing prices flagged."],
+"2.4":["A developer's function should return the top 3 scores but returns only 2.","Claude guesses at the problem and may rewrite code that wasn't broken.","The cause in one line, a corrected function, and a test proving it works."],
+"2.5":["A restaurant wants a tip calculator customers can use on their phones.","A basic page that may break on phones and accepts negative numbers.","A phone-friendly calculator with percentage buttons, a live per-person total and an error for bad input."],
+"2.6":["Ravi's manager says \"help me with onboarding\" and nothing else.","A generic onboarding plan that may solve the wrong problem.","Claude asks 5 questions first, then proposes a one-page scope based on the answers."],
+"2.7":["Claude wrote an email template that will go to hundreds of customers.","\"Yes, this looks good.\" Nothing has actually been tried.","The template tried on three awkward cases, each result shown, failures fixed."],
+"2.8":["Lena has a screenshot of her sales dashboard and needs the numbers in a report.","A vague description of the picture, with numbers sometimes misread or invented.","Each number listed with its label, a two-sentence trend, and any blurry value flagged instead of guessed."],
+"2.9":["Tom and his partner want a monthly budget they can both keep updating.","A one-off table in the chat that has to be rebuilt next month.","An interactive budget artifact with labelled fields, a running total and a warning when spending is too high."],
+"3.1":["Anita spends 20 hours a week on 10 different tasks and wants AI help with some.","A broad list of AI ideas, many of which would take longer to check than to do by hand.","Each task scored for repetition and ease of checking, with the 2 best candidates and why."],
+"3.2":["Every Friday, Joseph writes a support report from the week's ticket export.","Help with this week only. Next Friday he starts from scratch.","A fixed three-step workflow he can rerun every week, ending with numbers for him to verify."],
+"3.3":["Acme's support team keeps re-explaining their voice guide and refund policy in every chat.","Each chat starts from zero, so answers drift in tone and policy.","Project instructions that apply the same files and rules to every chat and say when to escalate."],
+"3.4":["A team wants Claude to read new support tickets and draft replies.","A general explanation of APIs, with no answer to what this team should do.","Three routes compared on effort, data access and risk, so the team can choose."],
+"3.5":["A weekly summary must go to Slack and its action items into a tracker.","One block of text that has to be reformatted by hand for each tool.","A short Slack message plus a separate CSV block that imports straight into the tracker."],
+"3.6":["A support agent is about to send a reply that Claude drafted.","\"Looks fine\" from Claude, which may miss a wrong name or number.","A pass or fail for each check, with the exact failing line quoted."],
+"3.7":["A team lead wants help with replies, but the tickets contain customer names and emails.","Personal data pasted into a chat that doesn't need it.","Placeholders instead of names and emails, and a lead who approves each reply."],
+"3.8":["Sara's Downloads folder has 600 files in no order.","Claude may move, rename or delete files Sara wanted where they were.","A plan shown first as a table, nothing deleted or renamed, and work starts only after Sara approves."],
+"3.9":["A signup form accepts email addresses without an @.","Changes across the app with no proof they work, possibly breaking other things.","The check fixed, a test that proves it, the test suite run, and the diff shown before committing."],
+"4.1":["A freelancer interviewed 5 dental clinics and wants a service to sell them.","A list of generic AI business ideas unrelated to what the clinics said.","The most frequent costly problem, with quotes as evidence and what is still unknown."],
+"4.2":["A consultant tells clients \"I'll help with marketing\".","A vague promise that is hard to sell or measure.","An outcome with a number, a deadline and a measure, such as \"all reviews answered within 24 hours\"."],
+"4.3":["A freelancer wants to offer review replies as a service to clinics.","A description of the idea with no clear split of who does what.","A step table showing what Claude does, what the person does, and every point a human must approve."],
+"4.4":["The review-reply service works, but only its creator knows how to run it.","A short summary of the process that a helper couldn't follow.","A checklist with intake fields, a prompt template, quality steps and a hand-over message anyone can run."],
+"4.5":["Before promising clients quality, a freelancer wants proof the service works.","An opinion that it seems good.","Results on 10 real reviews, a pass rate, and the pattern behind the failures."],
+"4.6":["A clinic spends 5 hours a week on reviews; the freelancer needs 40 minutes.","A price picked out of thin air.","A value case from the clinic's own costs, with three price options and reasons."],
+"4.7":["The freelancer is ready to pitch Smile Dental.","A generic proposal full of claims with no proof.","A one-page proposal built from the clinic's words, real test results and a clear price."],
+"5.1":["The same monthly report is written by hand for every client.","Claude repeats last month's report, with last month's details.","One template with placeholders that works for any client and month."],
+"5.2":["One giant prompt handles all support tickets, and nobody can tell which part fails.","Another giant prompt that is just as hard to test or fix.","Three small modules (classify, draft, check), each with one job and a clear input and output."],
+"5.3":["A team wants a web page that drafts review replies using Claude.","A page with the API key inside the browser, where anyone could copy it.","A page that calls Claude through a server, keeps the key private and comes with test inputs."],
+"5.4":["A team wants their invoice workflow to run automatically.","Everything automated, including steps that are costly or impossible to undo.","Each step marked automate, automate with review, or keep manual, based on risk."],
+"5.5":["A reply workflow is live, but nobody knows whether it is working well.","A feeling that it is fine.","Four weekly numbers: quality pass rate, cost per reply, time per reply and failures per 100."],
+"5.6":["An automated classifier sometimes sends tickets to the wrong team.","A hope that it won't fail.","The top 5 failure types, how each is detected, the fallback and when a person is alerted."],
+"5.7":["Only one person understands how the reply workflow works.","Long, rambling notes nobody reads.","A one-page README with purpose, inputs, steps, limits, tests and a changelog."],
+"5.8":["A freelancer has delivered three similar projects for different clients.","A list of random product ideas.","The steps the projects share, which could become a template, and who else has the problem."]
+};
 const ALL=LEVELS.flatMap(l=>l.skills.map(s=>({id:s[0],name:s[1],obj:s[2],weak:s[3],strong:s[4],why:s[5],gtask:s[6],starter:s[7],gc:s[8],ctask:s[9],cc:s[10],hint:s[11],sol:s[12],level:l.n})));
+ALL.forEach(s=>{const c=SCENES[s.id]||["","",""];s.scene=c[0];s.weakGet=c[1];s.strongGet=c[2];});
 ALL.forEach(s=>{s.gc=s.gc.filter(k=>CHECKS[k][0].test(s.strong.toLowerCase()))});
 const README=[
  ["home","Dashboard","A read-only summary of where you stand. Nothing is edited here.",[
@@ -112,24 +160,23 @@ const README=[
   ["Level cards","Each card lists the level's skills with a one-line objective and a status label, plus the level project."],
   ["Locking","Level 1 is open. Each later level opens when every skill in the level before is Mastered and that level's project has passed. Inside an open level you may take skills in any order; the listed order is the recommended one."],
   ["Practise / Revisit","Opens that skill in the Practice Lab at the stage you have reached. Completed skills stay open for revisiting."],
-  ["How this level is assessed","Expand it to see the rubric weights and the evidence the level requires."],
+  ["How this level is assessed","Expand it to see the six check questions and the evidence the level requires."],
   ["Capstone row","Shows whether the final challenge is locked, open or passed."]]],
- ["lab","Practice Lab","Where you do the work, one skill at a time. Pick a skill from the list on the left; the dot beside it shows its status.",[
-  ["1 Demo","A weak prompt, a stronger one, and one line on why the second works. Press the button to move on."],
-  ["2 Guided","You rewrite a starter prompt in the editor and press Run test cases. Each case shows PASS or FAIL with a specific fix. Passing every case means you have practised the skill."],
-  ["3 Challenge","A realistic scenario with no starter. It has more test cases and needs at least 30 words. Passing means you can apply the skill. It opens after the guided exercise is passed."],
-  ["4 Assessment","Run your prompt in Claude on a real task of your own and paste the output or a link as evidence. Then answer six fixed questions about that output. The questions are set by this workspace, not by you: Correctness, Output quality, Clarity of instructions, Reliability, Limits and errors, Practical usefulness. Each one comes with a plain question and a How to check line, and you pick Yes fully, Mostly, Partly, Barely or No. The page converts your answers to points. Tick any critical failure that is true. You pass with 80 or more (Mostly on everything is exactly 80), evidence of at least 30 characters, and no critical failure. Only this makes a skill Mastered. You can retry as often as you need; any question answered Partly or lower is named as the thing to improve."],
-  ["Why a rubric","It makes you judge the same output six separate ways, so a fluent but wrong answer cannot pass on feel, and a low answer points at the exact part of your prompt to revise."],
-  ["Claude's second opinion (live)","Shown when your account allows it. Claude reads your prompt and evidence and suggests an answer and a reason for each question. It is a suggestion: it cannot rerun your prompt or check facts it was not shown, so you confirm or change each answer before submitting."],
-  ["Hint and Show solution","Hint gives a small nudge. The solution appears only when you ask for it; after three failed attempts the page reminds you it is there."],
-  ["Simulated check","The test cases look for keywords that signal each element (audience, format, constraints and so on). They do not run Claude and cannot judge meaning, so treat a pass as a minimum, not as proof of quality."],
-  ["Run in Claude (live)","Shown only when your account allows it. It sends the prompt in the editor to Claude and displays the real response under a Live label. It asks permission the first time and uses your own Claude usage."],
-  ["Attempt history and notes","Every attempt is recorded with its date and result. The notes box is yours; it saves as you type."]]],
+ ["lab","Practice Lab","Where you do the work, one skill at a time, in three steps. Pick a skill from the list on the left; the dot beside it shows its status.",[
+  ["1 Learn & practise","A real use case for the skill: the situation, a weak prompt and what Claude typically gives back, a better prompt and what you get instead, and the parts that made the difference. Then you rewrite a weak starter prompt for a new case, right below, and press Check my prompt. Passing means you have practised the skill."],
+  ["2 Challenge","A harder case with no starter: you write the whole prompt. Passing means you can apply the skill on your own."],
+  ["3 Check in Claude","The only step that uses real Claude output. Copy your challenge prompt, paste it into claude.ai (or press Run it here if live runs are on), and paste Claude's reply into the box. Then answer six yes/no questions about that reply, each with a How to check line. To pass: Yes to Correctness and to at least 5 of the 6, with nothing ticked under Did any of these happen. Passing makes the skill Mastered. Anything you answer No to is named as the thing to fix."],
+  ["Why you answer the questions yourself","Only you can tell whether the reply is true for your situation and whether you would really use it. The questions make that judgement concrete instead of a gut feeling."],
+  ["Checks in steps 1 and 2","They read your prompt for the parts a strong prompt needs (audience, format, limits and so on). They don't run Claude, so treat a pass as a minimum."],
+  ["Own words check","A prompt that mostly repeats the example or the model answer fails, so copying the answer doesn't count as practice."],
+  ["Hint and model answer","Hint gives a nudge in both steps. The challenge also has Show model answer, for comparing after you try."],
+  ["Live runs","Shown only when your account allows it. They send your prompt to Claude and show the real reply."],
+  ["Attempt history and notes","Every attempt is recorded with its date and result. The notes box saves as you type."]]],
  ["projects","Projects","One portfolio project per level, then the capstone.",[
-  ["Project card","Each has a problem statement, deliverables, requirements, a completion checklist, test cases, an evidence box and the 100-point rubric."],
-  ["Passing a project","Tick every checklist item and test case (only after you have really done them), add evidence, then submit a rubric score of 80 or more with no critical failure. The project is needed to complete its level."],
-  ["Capstone","Opens once all five levels are complete. You get a problem and no solution. Write what you did for each of the 9 steps (at least 40 characters each), then score each step against its weight."],
-  ["If the capstone fails","Any step scored under 80% of its points produces a list of the specific skills behind it, each with a Practise button. You go back only to those."]]],
+  ["Project card","Each has a problem statement, deliverables, requirements, a completion checklist, test cases, an evidence box and the six yes/no check questions."],
+  ["Passing a project","Tick every checklist item and test case (only after you have really done them), add evidence, then answer the six yes/no questions about your project: Yes to Correctness and to at least 5 of the 6. The project is needed to complete its level."],
+  ["Capstone","Opens once all five levels are complete. You get a problem and no solution. Write what you did for each of the 9 steps (at least 40 characters each), then answer Yes or No for each step. You pass with at least 8 of the 9."],
+  ["If the capstone fails","Any step you answer No to produces a list of the specific skills behind it, each with a Practise button. You go back only to those."]]],
  ["skills","Skills","A table of all "+ALL.length+" skills, each tracked on its own.",[
   ["Columns","Status, total attempts, latest assessment result, the start of your evidence, last practised date, and the next recommended action."],
   ["Statuses","Not Started: nothing done. Learning: demo viewed or an attempt made. Practising: guided exercise passed. Assessment Pending: challenge passed. Mastered: assessment passed with evidence."],

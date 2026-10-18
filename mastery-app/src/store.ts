@@ -25,7 +25,7 @@ export const levelOpen = (n) => n === 1 || levelDone(n - 1);
 export const allDone = () => LEVELS.every((l) => levelDone(l.n));
 export const mastered = () => !!S.cap.ok && allDone();
 export const curLevel = () => { for (const l of LEVELS) if (!levelDone(l.n)) return l.n; return 5; };
-export const stageFor = (id) => ["demo", "guided", "challenge", "assess", "assess"][statusOf(id)];
+export const stageFor = (id) => ["learn", "learn", "challenge", "assess", "assess"][statusOf(id)];
 export function log(msg) { S.activity.unshift({ t: Date.now(), msg }); S.activity = S.activity.slice(0, 40); }
 
 export function nextAction() {
@@ -33,8 +33,9 @@ export function nextAction() {
   for (const l of LEVELS) {
     if (!levelOpen(l.n)) break;
     for (const s of l.skills) { const st = statusOf(s[0]); if (st < 4) {
-      const what = ["watch the demo and try the guided exercise", "finish the guided exercise", "complete the independent challenge", "pass the assessment"][st];
-      return { t: `${s[0]} ${s[1]}`, d: `${st} of 4 stages done, so this skill is not Mastered yet. Next: ${what}.`, tab: "lab", skill: s[0] }; } }
+      const what = ["read the example and write your first prompt", "pass the practice check", "complete the independent challenge", "pass the assessment"][st];
+      const done = [0, 0, 1, 2, 3][st];
+      return { t: `${s[0]} ${s[1]}`, d: `${done} of 3 stages done, so this skill is not Mastered yet. Next: ${what}.`, tab: "lab", skill: s[0] }; } }
     if (!(S.projects["P" + l.n] || {}).ok) return { t: `Level ${l.n} project: ${PROJECTS[l.n - 1].title}`, d: "Build it, test it, submit evidence.", tab: "projects" };
   }
   return { t: CAPSTONE.title, d: "Solve the capstone independently.", tab: "projects" };
@@ -46,21 +47,40 @@ export function runChecks(text, keys, minWords) {
   res.push({ label: `At least ${minWords} words of real instruction`, pass: words >= minWords, fix: `You wrote ${words} words. Add the detail Claude needs.` });
   return res;
 }
+// Share of the learner's 4-word phrases that also appear in a reference prompt (0 to 1).
+export function overlap(text, ref) {
+  const w = (s) => (s.toLowerCase().match(/[a-z0-9]+/g) || []);
+  const a = w(text), b = w(ref); if (a.length < 8) return 0;
+  const grams = (x) => { const g = new Set(); for (let i = 0; i + 4 <= x.length; i++) g.add(x.slice(i, i + 4).join(" ")); return g; };
+  const ga = grams(a), gb = grams(b); let hit = 0; ga.forEach((g) => { if (gb.has(g)) hit++; });
+  return ga.size ? hit / ga.size : 0;
+}
+export const COPY_LIMIT = 0.5;
+export function ownWords(text, ref, what) {
+  const o = overlap(text, ref);
+  return { label: "Written in your own words", pass: o < COPY_LIMIT, fix: `About ${Math.round(o * 100)}% of your phrases match ${what}. Write it for your own situation instead of copying.` };
+}
 export const target = (key) => (key === "cap" ? cap() : key[0] === "s" ? sk(key.slice(2)).a : pj(key.slice(2)));
 export const critsFor = (key) => (key === "cap" ? CAPSTONE.steps.map((s) => [s[0], s[1]]) : SKILL_RUBRIC);
 export function grade(key) {
-  const a = target(key), cs = critsFor(key); a.msg = "";
-  const score = cs.reduce((t, c, i) => t + (+a.sc[i] || 0), 0), crit = Object.values(a.crit || {}).some(Boolean); let block = "";
+  const a = target(key), cs = critsFor(key); a.msg = ""; a.ans = a.ans || {}; a.crit = a.crit || {};
+  const n = cs.length, yes = cs.filter((c, i) => a.ans[i] === true).length, unanswered = cs.filter((c, i) => a.ans[i] !== true && a.ans[i] !== false).length;
+  const crit = Object.values(a.crit).some(Boolean); let block = "";
+  if (unanswered) block = `Answer all ${n} questions first (${unanswered} left).`;
   if (key === "cap") { if (CAPSTONE.steps.some((s, i) => (a.steps[i] || "").trim().length < 40)) block = "Every step needs a written record of at least 40 characters."; }
   else {
-    if ((a.ev || "").trim().length < 30) block = "Add evidence first (at least 30 characters describing or containing the real output).";
+    if ((a.ev || "").trim().length < 30) block = "Paste Claude's real reply as evidence first (at least 30 characters).";
     if (key[0] === "p") { const p = PROJECTS.find((x) => x.id === key.slice(2)); if (!p.check.every((_, i) => a.check[i]) || !p.tests.every((_, i) => a.tests[i])) block = "Complete every checklist item and test case before submitting."; }
   }
-  a.n = (a.n || 0) + 1; a.score = score; a.ok = !block && score >= 80 && !crit; a.msg = block;
+  const need = key === "cap" ? 8 : 5, firstOk = key === "cap" || a.ans[0] === true;
+  a.n = (a.n || 0) + 1; a.yes = yes; a.of = n; a.score = Math.round((yes / n) * 100);
+  a.ok = !block && yes >= need && firstOk && !crit; a.msg = block;
   const name = key === "cap" ? "Capstone" : key[0] === "s" ? key.slice(2) + " " + byId(key.slice(2)).name : PROJECTS.find((x) => x.id === key.slice(2)).title;
-  if (key[0] === "s") { const k = sk(key.slice(2)); k.last = today(); k.hist.unshift({ d: today(), what: "Assessment " + score + "/100", ok: a.ok }); }
-  log(`${name}: assessment ${score}/100, ${a.ok ? "passed" : "not passed"}`); commit();
+  if (key[0] === "s") { const k = sk(key.slice(2)); k.last = today(); k.hist.unshift({ d: today(), what: `Assessment ${yes}/${n} checks`, ok: a.ok }); }
+  log(`${name}: assessment ${yes}/${n} checks, ${a.ok ? "passed" : "not passed"}`); commit();
 }
+export const passRule = (key) => key === "cap" ? "Answer Yes to at least 8 of the 9 steps." : "Answer Yes to Correctness and to at least 5 of the 6 questions, with nothing ticked under \"Did any of these happen?\".";
+export const scoreText = (a) => a.yes != null ? `${a.yes}/${a.of || 6} checks` : a.score != null ? `${a.score}/100` : "";
 
 /* ---------- persistence ---------- */
 let docRef = null, dl = null, sampleFn = null, perms = null, saveT = null, writing = false, dirty = false;
@@ -144,17 +164,17 @@ export function importText(txt) { if (!adopt(txt)) return false; log("Records im
 export function resetAll() { S = blank(); commit(); S.updated = 0; if (!HOSTED) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} } bump(); }
 export function loadSample() {
   const o = blank(); o.sample = true; const d = today();
-  const full = (id, score) => { const s = byId(id); o.skills[id] = { demo: true, g: { n: 2, ok: true, text: s.strong }, c: { n: 1, ok: true, text: s.sol }, a: { n: 1, ok: true, score, ev: "Sample: ran the prompt on last week's team notes; output pasted in my notes file.", sc: { 0: 25, 1: 16, 2: 15, 3: 12, 4: 8, 5: score - 76 }, crit: {} }, hist: [{ d, what: "Assessment " + score + "/100", ok: true }, { d, what: "Challenge attempt 1", ok: true }, { d, what: "Guided attempt 2", ok: true }, { d, what: "Guided attempt 1", ok: false }], last: d, notes: "" }; };
-  full("1.1", 88); full("1.2", 84); full("1.3", 91);
+  const full = (id, score) => { const s = byId(id); o.skills[id] = { demo: true, g: { n: 2, ok: true, text: s.strong }, c: { n: 1, ok: true, text: s.sol }, a: { n: 1, ok: true, score, yes: score > 90 ? 6 : 5, of: 6, ev: "Sample: ran the prompt in Claude on last week's team notes and pasted the reply here.", ans: { 0: true, 1: true, 2: true, 3: score > 90, 4: true, 5: true }, crit: {} }, hist: [{ d, what: "Assessment " + (score > 90 ? 6 : 5) + "/6 checks", ok: true }, { d, what: "Challenge attempt 1", ok: true }, { d, what: "Guided attempt 2", ok: true }, { d, what: "Guided attempt 1", ok: false }], last: d, notes: "" }; };
+  full("1.1", 83); full("1.2", 83); full("1.3", 100);
   const s = byId("1.4"); o.skills["1.4"] = { demo: true, g: { n: 1, ok: true, text: s.strong }, c: { n: 2, ok: false, text: "Rewrite it but shorter." }, a: { n: 0, ok: false, score: null, ev: "", sc: {}, crit: {} }, hist: [{ d, what: "Challenge attempt 2", ok: false }, { d, what: "Guided attempt 1", ok: true }], last: d, notes: "Sample note: I forget to say what to keep." };
   o.journal = [{ id: 2, date: d, learned: "Examples beat adjectives", why: "House style is hard to describe but easy to show", how: "Rewrote FAQ prompt with one sample answer", evidence: "10 FAQ answers matched the style on first run", conf: 4, unclear: "How many examples is too many", next: "Skill 1.4 challenge" }, { id: 1, date: d, learned: "Always name the audience", why: "Output changed completely for leadership vs engineers", how: "Ran the same prompt for two audiences", evidence: "Two status updates saved", conf: 3, unclear: "", next: "Skill 1.2" }];
-  o.activity = [{ t: Date.now(), msg: "1.4 Improve weak responses: challenge attempted (sample)" }, { t: Date.now(), msg: "1.3 Use examples and constraints: assessment 91/100, passed (sample)" }, { t: Date.now(), msg: "1.2 Provide context and clear instructions: assessment 84/100, passed (sample)" }];
+  o.activity = [{ t: Date.now(), msg: "1.4 Improve weak responses: challenge attempted (sample)" }, { t: Date.now(), msg: "1.3 Use examples and constraints: assessment 6/6 checks, passed (sample)" }, { t: Date.now(), msg: "1.2 Provide context and clear instructions: assessment 5/6 checks, passed (sample)" }];
   S = o; commit();
 }
 function fixReadmeForHost() {
   const set = (tab, label, text) => { const r = README.find((x) => x[0] === tab); const row = r && r[3].find((x) => x[0] === label); if (row) row[1] = text; };
   set("lab", "Run in Claude (live)", "Shown once you add a Claude API key on the Account tab. It sends the prompt in the editor to Claude and displays the real response under a Live label. Usage is charged to your own key.");
-  set("lab", "Claude's second opinion (live)", "Shown once you add a Claude API key. Claude reads your prompt and evidence and suggests an answer and a reason for each question. It is a suggestion: it cannot rerun your prompt or check facts it was not shown, so you confirm or change each answer before submitting.");
+  0 && set("lab", "Claude's second opinion (live)", "Shown once you add a Claude API key. Claude reads your prompt and evidence and suggests an answer and a reason for each question. It is a suggestion: it cannot rerun your prompt or check facts it was not shown, so you confirm or change each answer before submitting.");
   const a = README.find((x) => x[0] === "account");
   if (a) { a[2] = "Your login and your Claude API key."; a[3] = [["Sign-in screen", "Sign in with your Google account. The site receives only your email address. Email and password sign-in appears only if Google sign-in has not been set up on the site."], ["Log out", "Ends your session on this device. Your progress stays saved."], ["Claude API key", "Optional. Adding your own key turns on the live features. It is stored encrypted on the server and never shown again. Remove it at any time."]]; }
 }
