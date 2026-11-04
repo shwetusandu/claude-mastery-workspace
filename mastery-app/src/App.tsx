@@ -16,11 +16,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LayoutDashboard, GraduationCap, Trophy, FolderCheck, BookOpen, UserRound, Lock, ChevronRight, Check, ArrowRight } from "lucide-react";
 import { LEVELS, PROJECTS, CAPSTONE, SKILL_RUBRIC, LEVELS_OF, CRITICAL, ALL, README, SCHED, FEATURES, CONNECT } from "./curriculum";
 import * as st from "./store";
 import { S, env, STATUS, HOSTED, byId, sk, pj, cap, statusOf, levelDone, levelOpen, allDone, mastered, curLevel, commit, log, today } from "./store";
 
-const TABS = [["home", "Dashboard"], ["path", "Learning Path"], ["lab", "Practice Lab"], ["projects", "Projects"], ["skills", "Skills"], ["evidence", "Evidence"], ["features", "Features"], ["connect", "Connect tools"], ["scheduler", "Scheduler"], ["readme", "Readme"], ["account", "Account"]];
+const TABS = [["home", "Dashboard", LayoutDashboard], ["learn", "Learn", GraduationCap], ["capstone", "Capstone", Trophy], ["evidence", "Evidence", FolderCheck], ["guide", "Guide", BookOpen]];
+const ALIAS = { path: "learn", lab: "learn", skills: "learn", projects: "capstone", features: "guide", connect: "guide", scheduler: "guide", readme: "guide" };
+const GUIDE = [["g-features", "Models & features"], ["g-connect", "Connect tools"], ["g-scheduler", "Scheduled tasks"], ["g-readme", "How this workspace works"]];
+const GUIDE_OF = { features: "g-features", connect: "g-connect", scheduler: "g-scheduler", readme: "g-readme" };
 const TONE = { ok: "bg-ok-soft text-ok border-ok/30", bad: "bg-bad-soft text-bad border-bad/30", warn: "bg-warn-soft text-warn border-warn/30", info: "bg-info-soft text-info border-info/30" };
 const ST_TONE = ["bg-muted text-muted-foreground", "bg-info-soft text-info", "bg-warn-soft text-warn", "bg-accent text-accent-foreground", "bg-ok-soft text-ok"];
 const ST_DOT = ["bg-border", "bg-info", "bg-warn", "bg-primary", "bg-ok"];
@@ -57,30 +62,34 @@ function Result({ rkey, advice }) {
   return <Note tone="bad"><b>Not passed yet ({st.scoreText(a)}).</b> {a.msg} {crit && "You ticked something under \"Did any of these happen?\", which needs fixing first. "}{no.length > 0 && "Fix: " + no.join(", ") + ". "}{advice}</Note>;
 }
 
-function Home() {
-  const m = ALL.filter((s) => statusOf(s.id) === 4).length, pp = PROJECTS.filter((p) => (S.projects[p.id] || {}).ok).length + (S.cap.ok ? 1 : 0);
-  const pct = Math.round(((m + pp) / (ALL.length + 6)) * 100), g = ALL.filter((s) => S.skills[s.id]?.g.ok).length, c = ALL.filter((s) => S.skills[s.id]?.c.ok).length;
-  const stats = [[m, "skills mastered"], [ALL.length - m, "skills pending"], [g, "guided exercises done"], [c, "challenges passed"], [pp + "/6", "projects passed"]];
-  return <>
-    <div className="flex flex-wrap items-end justify-between gap-4"><Head eyebrow="Dashboard" title={mastered() ? "Claude Mastery Demonstrated" : `Level ${curLevel()}: ${LEVELS[curLevel() - 1].title}`} />
-      <div className="w-full max-w-xs space-y-1.5"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Overall mastery</span><b className="tabular-nums">{pct}%</b></div><Progress value={pct} className="h-2" /></div></div>
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5">{stats.map((x) => <div key={x[1]} className="bg-card px-4 py-3"><b className="block font-display text-[26px] leading-tight tabular-nums">{x[0]}</b><span className="text-[13px] text-muted-foreground">{x[1]}</span></div>)}</div>
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card><CardHeader><CardTitle className="text-lg">Levels</CardTitle></CardHeader><CardContent className="space-y-3">{LEVELS.map((l) => { const d = l.skills.filter((s) => statusOf(s[0]) === 4).length; return <div key={l.n} className="space-y-1.5"><div className="flex justify-between text-sm"><span><b style={{ color: `hsl(var(--l${l.n}))` }}>●</b> {l.n}. {l.title}</span><span className="text-[13px] text-muted-foreground">{levelDone(l.n) ? "Complete" : levelOpen(l.n) ? `${d}/${l.skills.length}` : "Locked"}</span></div><div className="h-2 overflow-hidden rounded bg-muted"><div className="h-full" style={{ width: `${(d / l.skills.length) * 100}%`, background: `hsl(var(--l${l.n}))` }} /></div></div>; })}</CardContent></Card>
-      <Card><CardHeader><CardTitle className="text-lg">Recent activity</CardTitle></CardHeader><CardContent className="space-y-1.5 text-[13px]">{S.activity.length ? S.activity.slice(0, 8).map((a, i) => <div key={i}><span className="text-muted-foreground">{new Date(a.t).toLocaleDateString()}</span> {a.msg}</div>) : <p className="text-muted-foreground">Nothing yet. Your first attempt in the Practice Lab will appear here.</p>}</CardContent></Card>
-    </div></>;
+function Ring({ pct }) {
+  const r = 52, c = 2 * Math.PI * r;
+  return <svg viewBox="0 0 120 120" className="h-28 w-28 shrink-0" role="img" aria-label={`Overall mastery ${pct}%`}><circle cx="60" cy="60" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />{pct > 0 && <circle cx="60" cy="60" r={r} fill="none" stroke="hsl(var(--primary))" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(c * pct) / 100} ${c}`} transform="rotate(-90 60 60)" />}<text x="60" y="58" textAnchor="middle" className="fill-foreground font-display" fontSize="26" fontWeight="700">{pct}%</text><text x="60" y="78" textAnchor="middle" className="fill-muted-foreground" fontSize="11">mastery</text></svg>;
 }
-
-function Path({ open, go }) {
-  return <><Head eyebrow="Learning path" title="Five levels, in order"><p className="text-muted-foreground">A level opens when every skill in the one before is Mastered and its project has passed.</p></Head>
-    {LEVELS.map((l) => { const o = levelOpen(l.n), p = PROJECTS[l.n - 1], pok = (S.projects[p.id] || {}).ok; return <div key={l.n} className="grid grid-cols-[44px_1fr] items-start gap-3">
-      <div className="grid h-11 w-11 place-items-center rounded-full font-display text-lg font-bold text-[#1a0d05]" style={{ background: `hsl(var(--l${l.n}))` }}>{l.n}</div>
-      <Card className={cn("min-w-0", !o && "opacity-60")}><CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0"><div><CardTitle className="text-lg">{l.title}</CardTitle><CardDescription>{l.goal}</CardDescription></div><Pill tone={levelDone(l.n) ? ST_TONE[4] : o ? ST_TONE[2] : ST_TONE[0]}>{levelDone(l.n) ? "Level complete" : o ? "Open" : "Locked"}</Pill></CardHeader>
-        <CardContent><div className="divide-y border-t">{l.skills.map((s) => <div key={s[0]} className="flex flex-wrap items-center justify-between gap-2 py-2"><span className="min-w-0 flex-1 basis-52 text-sm"><b>{s[0]}</b> {s[1]}<br /><span className="text-[13px] text-muted-foreground">{s[2]}</span></span><span className="flex items-center gap-2"><StatusPill id={s[0]} /><Button variant="outline" size="sm" disabled={!o} onClick={() => open(s[0])}>{statusOf(s[0]) === 4 ? "Revisit" : "Practise"}</Button></span></div>)}
-          <div className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><span><b>Project</b> {p.title}</span><span className="flex items-center gap-2"><Pill tone={pok ? ST_TONE[4] : ST_TONE[0]}>{pok ? "Passed" : "Not passed"}</Pill><Button variant="outline" size="sm" disabled={!o} onClick={() => go("projects")}>Open</Button></span></div></div>
-          <Accordion type="single" collapsible><AccordionItem value="a" className="border-0"><AccordionTrigger className="py-2 text-[13px]">How this level is assessed</AccordionTrigger><AccordionContent className="space-y-1.5 text-[13px]"><p><b>Each skill:</b> learn it on a real use case and practise, take an independent challenge, then run your prompt in Claude and check the real answer with six yes/no questions.</p><p><b>The six questions:</b> {SKILL_RUBRIC.map((r) => r[0]).join(" · ")}</p><p><b>Required evidence:</b> {l.evidence}</p></AccordionContent></AccordionItem></Accordion>
-        </CardContent></Card></div>; })}
-    <div className="grid grid-cols-[44px_1fr] items-start gap-3"><div className="grid h-11 w-11 place-items-center rounded-full bg-foreground text-lg text-background">★</div><Card className={cn(!allDone() && "opacity-60")}><CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0"><div><CardTitle className="text-lg">{CAPSTONE.title}</CardTitle><CardDescription>Opens when all five levels are complete.</CardDescription></div><Pill tone={S.cap.ok ? ST_TONE[4] : ST_TONE[0]}>{S.cap.ok ? "Passed" : allDone() ? "Open" : "Locked"}</Pill></CardHeader></Card></div></>;
+function Home({ resume, go }) {
+  const m = ALL.filter((s) => statusOf(s.id) === 4).length, pp = PROJECTS.filter((p) => (S.projects[p.id] || {}).ok).length + (S.cap.ok ? 1 : 0);
+  const pct = Math.round(((m + pp) / (ALL.length + 6)) * 100), c = ALL.filter((s) => S.skills[s.id]?.c.ok).length;
+  const n = st.nextAction(), cl = curLevel();
+  const stats = [[`${m}/${ALL.length}`, "skills mastered"], [c, "challenges passed"], [`${pp}/6`, "projects passed"], [S.journal.length, "sessions logged"]];
+  return <>
+    <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+      <div className="relative overflow-hidden rounded-xl border bg-card p-6">
+        <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: `hsl(var(--l${cl}))` }} />
+        <Eyebrow>{mastered() ? "All done" : "Continue where you left off"}</Eyebrow>
+        <h2 className="mt-2 text-[28px] font-bold">{n.t}</h2>
+        <p className="mt-1 max-w-[60ch] text-muted-foreground">{n.d}</p>
+        <div className="mt-5 flex flex-wrap items-center gap-3"><Button size="lg" onClick={resume}>Resume <ArrowRight className="ml-1.5 h-4 w-4" /></Button><span className="text-sm text-muted-foreground">Level {cl}: {LEVELS[cl - 1].title}</span></div>
+      </div>
+      <div className="flex items-center gap-5 rounded-xl border bg-card p-5"><Ring pct={pct} />
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3">{stats.map((x) => <div key={x[1]}><b className="block font-display text-xl tabular-nums">{x[0]}</b><span className="text-[12px] text-muted-foreground">{x[1]}</span></div>)}</div></div>
+    </div>
+    <div className="rounded-xl border bg-card p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-bold">Your journey</h3><Button variant="ghost" size="sm" onClick={() => go("learn")}>Open Learn <ChevronRight className="ml-1 h-4 w-4" /></Button></div>
+      <ol className="grid gap-3 sm:grid-cols-5">{LEVELS.map((l) => { const d = l.skills.filter((s) => statusOf(s[0]) === 4).length, o = levelOpen(l.n), done = levelDone(l.n); return <li key={l.n} className={cn("rounded-lg border p-3", l.n === cl && !mastered() && "ring-2 ring-primary", !o && "opacity-55")}>
+        <div className="flex items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full font-display text-sm font-bold text-[#1a0d05]" style={{ background: `hsl(var(--l${l.n}))` }}>{done ? <Check className="h-4 w-4" /> : l.n}</span>{!o && <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Locked" />}</div>
+        <p className="mt-2 text-sm font-semibold leading-tight">{l.title}</p>
+        <div className="mt-2 h-1.5 overflow-hidden rounded bg-muted"><div className="h-full" style={{ width: `${(d / l.skills.length) * 100}%`, background: `hsl(var(--l${l.n}))` }} /></div>
+        <p className="mt-1 text-[12px] text-muted-foreground">{done ? "Complete" : o ? `${d} of ${l.skills.length} skills` : "Locked"}</p></li>; })}</ol></div>
+    <Card><CardHeader><CardTitle className="text-lg">Recent activity</CardTitle></CardHeader><CardContent className="space-y-1.5 text-[13px]">{S.activity.length ? S.activity.slice(0, 6).map((a, i) => <div key={i}><span className="text-muted-foreground">{new Date(a.t).toLocaleDateString()}</span> {a.msg}</div>) : <p className="text-muted-foreground">Nothing yet. Your first attempt on the Learn page will appear here.</p>}</CardContent></Card></>;
 }
 
 function Lab({ skill, stage, setStage, open }) {
@@ -136,23 +145,54 @@ function Lab({ skill, stage, setStage, open }) {
       <Field id="ev-s" label="Claude's reply"><Textarea id="ev-s" className="min-h-[140px]" value={k.a.ev} onChange={(e) => { k.a.ev = e.target.value; commit(); }} placeholder="Paste Claude's reply here" /></Field></div>
     <div className="rounded-lg border p-4"><Checklist rkey={"s:" + s.id} /></div>
     <Result rkey={"s:" + s.id} advice="Go back to step 2, improve the prompt for those points, run it again and resubmit." /></>;
-  return <><Head eyebrow="Practice lab" title={`${s.id} ${s.name}`}><div className="flex items-center gap-2 pt-1"><StatusPill id={s.id} /><span className="text-[13px] text-muted-foreground">Level {s.level}</span></div></Head>
-    <div className="grid gap-4 md:grid-cols-[250px_1fr]">
-      <Card className="min-w-0"><ScrollArea className="md:h-[70vh]"><div className="p-2">{LEVELS.map((l) => <div key={l.n}><Eyebrow className="px-2 pb-1 pt-2">Level {l.n}{levelOpen(l.n) ? "" : " · locked"}</Eyebrow>{l.skills.map((x) => <button key={x[0]} disabled={!levelOpen(l.n)} onClick={() => open(x[0])} className={cn("flex w-full items-start justify-between gap-2 rounded px-2 py-1.5 text-left text-[13px] disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring", x[0] === s.id && "bg-muted font-medium")}><span>{x[0]} {x[1]}</span><i className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", ST_DOT[statusOf(x[0])])} /></button>)}</div>)}</div></ScrollArea></Card>
-      <div className="min-w-0 space-y-4">
+  return <><Head eyebrow="Learn" title={`${s.id} ${s.name}`}><div className="flex items-center gap-2 pt-1"><StatusPill id={s.id} /><span className="text-[13px] text-muted-foreground">Level {s.level} · {LEVELS[s.level - 1].title}</span></div></Head>
+    <div className="min-w-0 space-y-4">
         <Card><CardContent className="space-y-4 pt-4"><Tabs value={stage} onValueChange={setStage}><TabsList className="h-auto flex-wrap justify-start">{[["learn", "1 Learn & practise"], ["challenge", "2 Challenge"], ["assess", "3 Check in Claude"]].map((t) => <TabsTrigger key={t[0]} value={t[0]}>{t[1]}{done[t[0]] && <b className="ml-1.5 text-ok">✓</b>}</TabsTrigger>)}</TabsList></Tabs>
           <p className="text-[13px] text-muted-foreground">{{ learn: "See the skill in a real situation, then use it on a new case.", challenge: "Use the skill on your own, on a harder case.", assess: "Run your prompt in Claude and check the real answer." }[stage]}</p>{body}</CardContent></Card>
         {o && <div className="grid gap-4 md:grid-cols-2"><Card><CardHeader><CardTitle className="text-lg">Attempt history</CardTitle></CardHeader><CardContent className="space-y-1 text-[13px]">{k.hist.length ? k.hist.slice(0, 8).map((h, i) => <div key={i}><span className="text-muted-foreground">{h.d}</span> {h.what} <b className={h.ok ? "text-ok" : "text-bad"}>{h.ok ? "pass" : "fail"}</b></div>) : <p className="text-muted-foreground">No attempts yet.</p>}</CardContent></Card>
           <Card><CardHeader><CardTitle className="text-lg">Your notes</CardTitle></CardHeader><CardContent><Field id="notes" label="What worked, what you would change"><Textarea id="notes" value={k.notes} onChange={(e) => { k.notes = e.target.value; commit(); }} /></Field></CardContent></Card></div>}
-      </div></div></>;
+      </div></>;
+}
+
+function Learn({ skill, stage, setStage, open, go, view, setView }) {
+  const s = byId(skill) || ALL[0], [lv, setLv] = useState(() => [String(s.level)]);
+  useEffect(() => { setLv((x) => x.includes(String(s.level)) ? x : [...x, String(s.level)]); }, [s.level]);
+  const L = LEVELS[s.level - 1];
+  return <div className="grid gap-5 md:grid-cols-[270px_1fr]">
+    <aside className="min-w-0 md:sticky md:top-[76px] md:self-start"><Card><ScrollArea className="md:h-[calc(100vh-110px)]"><div className="p-3">
+      <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">{[["skill", "Practise"], ["all", "All skills"]].map((t) => <button key={t[0]} onClick={() => setView(t[0])} aria-pressed={view === t[0]} className={cn("rounded-md px-2 py-1.5 text-sm font-medium", view === t[0] ? "bg-background shadow-sm" : "text-muted-foreground")}>{t[1]}</button>)}</div>
+      <Eyebrow className="px-1 pb-1">Learning path</Eyebrow>
+      <Accordion type="multiple" value={lv} onValueChange={setLv}>{LEVELS.map((l) => { const o = levelOpen(l.n), d = l.skills.filter((x) => statusOf(x[0]) === 4).length, p = PROJECTS[l.n - 1], pok = (S.projects[p.id] || {}).ok; return <AccordionItem key={l.n} value={String(l.n)} className="border-b-0">
+        <AccordionTrigger className="rounded-md px-1 py-2 hover:no-underline"><span className="flex min-w-0 flex-1 items-center gap-2 text-left"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full font-display text-xs font-bold text-[#1a0d05]" style={{ background: `hsl(var(--l${l.n}))` }}>{levelDone(l.n) ? <Check className="h-3.5 w-3.5" /> : l.n}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{l.title}</span><span className="block text-[11px] font-normal text-muted-foreground">{o ? `${d}/${l.skills.length} mastered` : "Locked"}</span></span>{!o && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}</span></AccordionTrigger>
+        <AccordionContent className="pb-2"><div className="ml-3 border-l pl-2">{l.skills.map((x) => <button key={x[0]} disabled={!o} onClick={() => { setView("skill"); open(x[0]); }} className={cn("flex w-full items-start justify-between gap-2 rounded px-2 py-1.5 text-left text-[13px] disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring", view === "skill" && x[0] === s.id && "bg-accent font-medium text-accent-foreground")}><span>{x[0]} {x[1]}</span><i className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", ST_DOT[statusOf(x[0])])} /></button>)}
+          <button disabled={!o} onClick={() => go("capstone")} className="mt-1 flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[13px] disabled:opacity-45"><span className="flex items-center gap-1.5"><Trophy className="h-3.5 w-3.5" /> Project: {p.title}</span>{pok && <Check className="h-3.5 w-3.5 text-ok" />}</button></div></AccordionContent></AccordionItem>; })}</Accordion>
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 px-1 text-[11px] text-muted-foreground">{STATUS.map((x, i) => <span key={x} className="flex items-center gap-1"><i className={cn("h-2 w-2 rounded-full", ST_DOT[i])} />{x}</span>)}</div>
+    </div></ScrollArea></Card></aside>
+    <div className="min-w-0 space-y-4">{view === "all" ? <Skills open={(id) => { setView("skill"); open(id); }} embedded /> : <>
+      <Lab skill={skill} stage={stage} setStage={setStage} open={open} />
+      <Accordion type="single" collapsible className="rounded-lg border bg-card px-4"><AccordionItem value="a" className="border-0"><AccordionTrigger className="text-sm hover:no-underline">About Level {L.n}: {L.goal}</AccordionTrigger><AccordionContent className="space-y-1.5 text-[13px]"><p><b>Each skill:</b> learn it on a real use case and practise, take an independent challenge, then run your prompt in Claude and check the real answer with six yes/no questions.</p><p><b>To finish the level:</b> {L.evidence}</p></AccordionContent></AccordionItem></Accordion></>}</div>
+  </div>;
+}
+
+function Guide({ open, go, target }) {
+  useEffect(() => { if (target) { const el = document.getElementById(target); if (el) setTimeout(() => el.scrollIntoView({ block: "start" }), 50); } }, [target]);
+  const jump = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  return <>
+    <Head eyebrow="Guide" title="Everything about Claude and this workspace"><p className="max-w-[68ch] pt-1 text-muted-foreground">Reference pages you can come back to. Nothing here is scored.</p></Head>
+    <nav aria-label="Guide sections" className="sticky z-[5] -mx-4 flex gap-2 overflow-x-auto border-b bg-background/95 px-4 py-2 backdrop-blur" style={{ top: "57px" }}>{GUIDE.map((g) => <Button key={g[0]} size="sm" variant="outline" className="shrink-0 rounded-full" onClick={() => jump(g[0])}>{g[1]}</Button>)}</nav>
+    <section id="g-features" className="scroll-mt-28 space-y-5"><Features open={open} go={(t) => go(t)} /></section>
+    <Separator /><section id="g-connect" className="scroll-mt-28 space-y-5"><Connect open={open} /></section>
+    <Separator /><section id="g-scheduler" className="scroll-mt-28 space-y-5"><Scheduler open={open} /></section>
+    <Separator /><section id="g-readme" className="scroll-mt-28 space-y-5"><Readme go={go} /></section>
+  </>;
 }
 
 function Projects({ open }) {
   const c = cap(), capOpen = allDone();
   const gaps = [...new Set(CAPSTONE.steps.flatMap((s, i) => (c.ans?.[i] === false ? s[2] : [])))];
   const Ticks = ({ p, kind, title }) => { const d = pj(p.id); return <div className="space-y-2"><Eyebrow>{title}</Eyebrow>{p[kind].map((x, i) => <div key={i} className="flex items-start gap-2 text-sm"><Checkbox id={p.id + kind + i} className="mt-0.5" checked={!!d[kind][i]} onCheckedChange={(v) => { d[kind][i] = !!v; commit(); }} /><label htmlFor={p.id + kind + i}>{x}</label></div>)}</div>; };
-  return <><Head eyebrow="Real-world projects" title="Build things worth showing"><p className="text-muted-foreground">One project per level, then the capstone. A project passes on a completed checklist, run test cases, evidence, and Yes to at least 5 of the 6 check questions.</p></Head>
-    <Accordion type="multiple" defaultValue={["P" + curLevel()]} className="space-y-3">{PROJECTS.map((p) => { const d = pj(p.id), o = levelOpen(p.level); return <AccordionItem key={p.id} value={p.id} disabled={!o} className="rounded-lg border bg-card px-4">
+  return <><Head eyebrow="Capstone" title="Projects and the final challenge"><p className="text-muted-foreground">Each level ends with a portfolio project; all five unlock the final capstone. A project passes on a completed checklist, run test cases, evidence, and Yes to at least 5 of the 6 check questions.</p></Head>
+    <Eyebrow className="-mb-2">Level projects</Eyebrow><Accordion type="multiple" defaultValue={["P" + curLevel()]} className="space-y-3">{PROJECTS.map((p) => { const d = pj(p.id), o = levelOpen(p.level); return <AccordionItem key={p.id} value={p.id} disabled={!o} className="rounded-lg border bg-card px-4">
       <AccordionTrigger className="hover:no-underline"><span className="flex flex-wrap items-center gap-3 text-left"><b className="font-display text-[17px]">Level {p.level} · {p.title}</b><Pill tone={d.ok ? ST_TONE[4] : ST_TONE[0]}>{!o ? "Locked" : d.ok ? "Passed" : "Not passed"}</Pill></span></AccordionTrigger>
       <AccordionContent className="space-y-4 text-[15px]"><p>{p.problem}</p>
         <div className="grid gap-4 md:grid-cols-2"><div><Eyebrow>Deliverables</Eyebrow><ul className="list-disc pl-5 text-sm">{p.deliver.map((x) => <li key={x}>{x}</li>)}</ul></div><div><Eyebrow>Requirements and constraints</Eyebrow><ul className="list-disc pl-5 text-sm">{p.req.map((x) => <li key={x}>{x}</li>)}</ul></div></div>
@@ -166,11 +206,11 @@ function Projects({ open }) {
         {c.score != null && !c.ok && gaps.length > 0 && <div className="space-y-1"><Eyebrow>Skill gaps to practise</Eyebrow><div className="divide-y">{gaps.map((id) => <div key={id} className="flex items-center justify-between gap-2 py-1.5 text-sm"><span>{id} {byId(id).name}</span><Button size="sm" variant="outline" onClick={() => open(id)}>Practise</Button></div>)}</div></div>}</>}</CardContent></Card></>;
 }
 
-function Skills({ open }) {
+function Skills({ open, embedded }) {
   const [f, setF] = useState("all");
   const nextFor = (id) => ["Start with the demo", "Finish the guided exercise", "Take the independent challenge", "Submit the assessment with evidence", "Revisit to stay sharp"][statusOf(id)];
   const rows = ALL.filter((s) => f === "all" || String(statusOf(s.id)) === f);
-  return <><div className="flex flex-wrap items-end justify-between gap-3"><Head eyebrow="Skills tracker" title={`${ALL.length} skills, tracked one by one`} /><div className="w-52"><Field id="filt" label="Filter by status"><Select value={f} onValueChange={setF}><SelectTrigger id="filt"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All</SelectItem>{STATUS.map((x, i) => <SelectItem key={x} value={String(i)}>{x}</SelectItem>)}</SelectContent></Select></Field></div></div>
+  return <><div className="flex flex-wrap items-end justify-between gap-3">{embedded ? <div><h2 className="text-2xl font-bold">All skills</h2><p className="text-sm text-muted-foreground">{ALL.length} skills, tracked one by one.</p></div> : <Head eyebrow="Skills tracker" title={`${ALL.length} skills, tracked one by one`} />}<div className="w-52"><Field id="filt" label="Filter by status"><Select value={f} onValueChange={setF}><SelectTrigger id="filt"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All</SelectItem>{STATUS.map((x, i) => <SelectItem key={x} value={String(i)}>{x}</SelectItem>)}</SelectContent></Select></Field></div></div>
     <Card><CardContent className="pt-4">{rows.length ? <Table className="min-w-[760px]"><TableHeader><TableRow>{["Skill", "Status", "Attempts", "Latest assessment", "Evidence", "Last practised", "Next action", ""].map((h) => <TableHead key={h} className="font-mono text-[11px] uppercase tracking-wider">{h}</TableHead>)}</TableRow></TableHeader>
       <TableBody>{rows.map((s) => { const k = S.skills[s.id]; return <TableRow key={s.id}><TableCell><b>{s.id}</b> {s.name}</TableCell><TableCell><StatusPill id={s.id} /></TableCell><TableCell className="tabular-nums">{k ? k.g.n + k.c.n + k.a.n : 0}</TableCell><TableCell className="tabular-nums">{k && k.a.score != null ? `${st.scoreText(k.a)} ${k.a.ok ? "pass" : "fail"}` : "–"}</TableCell><TableCell className="max-w-[180px] text-[13px]">{k?.a.ev ? k.a.ev.slice(0, 60) + (k.a.ev.length > 60 ? "…" : "") : "–"}</TableCell><TableCell className="tabular-nums">{k?.last || "–"}</TableCell><TableCell className="text-[13px]">{nextFor(s.id)}</TableCell><TableCell><Button size="sm" variant="outline" disabled={!levelOpen(s.level)} onClick={() => open(s.id)}>Open</Button></TableCell></TableRow>; })}</TableBody></Table> : <p className="text-muted-foreground">No skills have this status yet.</p>}</CardContent></Card></>;
 }
@@ -254,8 +294,8 @@ function Features({ open, go }) {
 
 function Readme({ go }) {
   return <><Head eyebrow="Readme" title="How this workspace works"><p className="max-w-[65ch] text-muted-foreground">Each skill moves through four stages, and only the last one counts as mastery. The sections below explain every tab.</p></Head>
-    <Card><CardHeader><CardTitle className="text-lg">Always on screen</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p><b>Next action strip.</b> The orange strip under the tabs names the single next thing to do and takes you there with Go.</p><p><b>Save indicator.</b> Top right. "Saved to your account" means progress follows you across devices; "Saved in this browser" means it lives only in this browser, so export a backup now and then.</p><p><b>Simulated versus live.</b> Yellow labels mark checks that read your prompt without running Claude. A green Live label marks a real Claude response.</p></CardContent></Card>
-    {README.map((r) => <Card key={r[0]}><CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0"><div><CardTitle className="text-lg">{r[1]}</CardTitle><CardDescription>{r[2]}</CardDescription></div><Button size="sm" variant="outline" onClick={() => go(r[0])}>Open {r[1]}</Button></CardHeader><CardContent><Rows rows={r[3]} /></CardContent></Card>)}
+    <Card><CardHeader><CardTitle className="text-lg">Always on screen</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p><b>Next step.</b> The Dashboard's "Continue where you left off" card, and the slim strip on other pages, name the single next thing to do.</p><p><b>Save indicator.</b> Top right. "Saved to your account" means progress follows you across devices; "Saved in this browser" means it lives only in this browser, so export a backup now and then.</p><p><b>Simulated versus live.</b> Yellow labels mark checks that read your prompt without running Claude. A green Live label marks a real Claude response.</p></CardContent></Card>
+    {[["home", "Dashboard", "Where you stand and what to do next.", ["home"]], ["learn", "Learn", "The learning path on the left and the skill you are practising on the right. Switch to All skills for the tracker table.", ["path", "lab", "skills"]], ["capstone", "Capstone", "The five level projects and the final challenge.", ["projects"]], ["evidence", "Evidence", "", ["evidence"]], ["guide", "Guide", "Reference pages: models and features, connecting tools, scheduled tasks, and this page.", ["features", "connect", "scheduler"]], ["account", "Account", "Open it from the round profile button at the top right.", ["account"]]].map(([id, name, desc, from]) => { const rows = from.flatMap((f) => (README.find((r) => r[0] === f) || [0, 0, 0, []])[3].map((x) => from.length > 1 ? [`${(README.find((r) => r[0] === f) || [])[1]}: ${x[0]}`, x[1]] : x)); const base = README.find((r) => r[0] === from[0]); return [id, name, desc || (base ? base[2] : ""), rows]; }).map((r) => <Card key={r[0]}><CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0"><div><CardTitle className="text-lg">{r[1]}</CardTitle><CardDescription>{r[2]}</CardDescription></div>{r[0] !== "guide" && <Button size="sm" variant="outline" onClick={() => go(r[0])}>Open {r[1]}</Button>}</CardHeader><CardContent><Rows rows={r[3]} /></CardContent></Card>)}
     <Card><CardHeader><CardTitle className="text-lg">Mastery rules in one place</CardTitle></CardHeader><CardContent className="space-y-1 text-sm"><p>Practice passed = practising. Challenge passed = can apply it. Claude check passed = Mastered. A level is complete when all its skills are Mastered and its project has passed.</p><p>The Claude check uses six yes/no questions: {SKILL_RUBRIC.map((r) => r[0]).join(", ")}. {st.passRule("s:x")}</p></CardContent></Card></>;
 }
 
@@ -295,28 +335,43 @@ function Gate() {
   </CardContent></Card>;
 }
 
+function Logo() {
+  return <svg viewBox="0 0 28 28" className="h-7 w-7" aria-hidden="true">{[1, 2, 3, 4, 5].map((n) => <rect key={n} x={2 + (n - 1) * 5} y={24 - n * 4} width="4" height={n * 4} rx="1.2" fill={`hsl(var(--l${n}))`} />)}</svg>;
+}
+function AccountMenu({ go }) {
+  const initial = (env.me?.name || "G").trim().charAt(0).toUpperCase();
+  return <DropdownMenu><DropdownMenuTrigger asChild><button aria-label="Account menu" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-foreground font-semibold text-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{env.me ? initial : <UserRound className="h-4 w-4" />}</button></DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="w-64"><DropdownMenuLabel className="font-normal"><span className="block truncate font-semibold">{env.me?.name || "Guest"}</span><span className="block font-mono text-[11px] text-muted-foreground">{env.sync}</span></DropdownMenuLabel><DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => go("account")}>Account settings</DropdownMenuItem>
+      {HOSTED ? <DropdownMenuItem onSelect={() => st.logout()}>Log out</DropdownMenuItem> : <DropdownMenuItem onSelect={() => st.enter(false)}>Show sign-in screen</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu>;
+}
+
 export default function App() {
   st.useStore();
-  const [tab, setTab] = useState(() => { const h = location.hash.slice(1); return TABS.some((t) => t[0] === h) ? h : "home"; });
-  const [skill, setSkill] = useState("1.1"), [stage, setStage] = useState("demo");
+  const parse = () => { const h = location.hash.slice(1); return { tab: TABS.some((t) => t[0] === h) || h === "account" ? h : ALIAS[h] || "home", section: GUIDE_OF[h] || null }; };
+  const [{ tab, section }, setNav] = useState(parse);
+  const [skill, setSkill] = useState("1.1"), [stage, setStage] = useState("learn"), [view, setView] = useState("skill");
   useEffect(() => { st.boot(); }, []);
-  const go = (t) => { setTab(t); try { history.replaceState(null, "", "#" + t); } catch (e) {} window.scrollTo(0, 0); };
-  const open = (id, sg) => { setSkill(id); setStage(sg || st.stageFor(id)); go("lab"); };
-  if (!env.entered) return <div className="mx-auto max-w-[1120px] px-4 pb-14"><Gate /></div>;
-  const n = st.nextAction();
-  return <div className="mx-auto flex max-w-[1120px] flex-col gap-5 px-4 pb-14">
-    <header className="sticky z-10 -mx-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-b bg-background px-4 py-2.5" style={{ top: "env(safe-area-inset-top, 0px)" }}>
-      <h1 className="text-xl font-bold">Claude Mastery</h1>
-      <nav className="flex flex-wrap gap-1">{TABS.map((t) => <button key={t[0]} onClick={() => go(t[0])} aria-current={tab === t[0]} className={cn("rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring", tab === t[0] && "bg-foreground text-background")}>{t[1]}</button>)}</nav>
-      <span className="font-mono text-xs text-muted-foreground md:ml-auto">{env.sync}</span>
+  const go = (t) => { const nt = ALIAS[t] || t; setNav({ tab: nt, section: GUIDE_OF[t] || null }); try { history.replaceState(null, "", "#" + nt); } catch (e) {} if (!GUIDE_OF[t]) window.scrollTo(0, 0); };
+  const open = (id, sg) => { setSkill(id); setStage(sg || st.stageFor(id)); setView("skill"); go("learn"); };
+  if (!env.entered) return <div className="mx-auto max-w-[1180px] px-4 pb-14"><Gate /></div>;
+  const n = st.nextAction(), resume = () => (n.skill ? open(n.skill) : go(n.tab));
+  return <div className="mx-auto flex max-w-[1180px] flex-col gap-5 px-4 pb-24 md:pb-14">
+    <header className="sticky z-10 -mx-4 flex items-center gap-4 border-b bg-background/95 px-4 py-2.5 backdrop-blur" style={{ top: "env(safe-area-inset-top, 0px)" }}>
+      <button onClick={() => go("home")} className="flex items-center gap-2"><Logo /><span className="font-display text-lg font-bold">Claude Mastery</span></button>
+      <nav aria-label="Main" className="ml-4 hidden gap-1 md:flex">{TABS.map(([id, label, Icon]) => <button key={id} onClick={() => go(id)} aria-current={tab === id} className={cn("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring", tab === id && "bg-foreground text-background hover:text-background")}><Icon className="h-4 w-4" />{label}</button>)}</nav>
+      <span className="ml-auto hidden font-mono text-[11px] text-muted-foreground lg:inline">{env.sync}</span>
+      <div className="ml-auto lg:ml-0"><AccountMenu go={go} /></div>
     </header>
     {S.sample ? <Note tone="warn"><b>Sample data loaded.</b> These records are examples, not your progress.<Button size="sm" variant="outline" onClick={() => st.resetAll()}>Clear sample data</Button></Note>
       : !S.updated && <Note>New here? Level 1 is open. You can also load sample data to see a workspace in progress.<Button size="sm" variant="outline" onClick={() => st.loadSample()}>Load sample data</Button></Note>}
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-l-4 border-primary bg-accent px-4 py-3"><div className="min-w-0 flex-1 basis-60"><Eyebrow>Next action</Eyebrow><b>{n.t}</b><br /><span className="text-[13px]">{n.d}</span></div><Button onClick={() => (n.skill ? open(n.skill) : go(n.tab))}>Go</Button></div>
+    {tab !== "home" && tab !== "learn" && <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border-l-4 border-primary bg-accent px-4 py-2 text-sm"><span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Next</span><b className="min-w-0 flex-1">{n.t}</b><Button size="sm" variant="ghost" onClick={resume}>Go <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button></div>}
     <main className="flex flex-col gap-5">
-      {tab === "home" && <Home />}{tab === "path" && <Path open={open} go={go} />}{tab === "lab" && <Lab skill={skill} stage={stage} setStage={setStage} open={open} />}
-      {tab === "projects" && <Projects open={open} />}{tab === "skills" && <Skills open={open} />}{tab === "evidence" && <Evidence />}
-      {tab === "connect" && <Connect open={open} />}{tab === "features" && <Features open={open} go={go} />}{tab === "scheduler" && <Scheduler open={open} />}{tab === "readme" && <Readme go={go} />}{tab === "account" && <Account />}
+      {tab === "home" && <Home resume={resume} go={go} />}
+      {tab === "learn" && <Learn skill={skill} stage={stage} setStage={setStage} open={open} go={go} view={view} setView={setView} />}
+      {tab === "capstone" && <Projects open={open} />}{tab === "evidence" && <Evidence />}
+      {tab === "guide" && <Guide open={open} go={go} target={section} />}{tab === "account" && <Account />}
     </main>
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-background/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>{TABS.map(([id, label, Icon]) => <button key={id} onClick={() => go(id)} aria-current={tab === id} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-muted-foreground", tab === id && "text-primary")}><Icon className="h-5 w-5" />{label}</button>)}</nav>
   </div>;
 }

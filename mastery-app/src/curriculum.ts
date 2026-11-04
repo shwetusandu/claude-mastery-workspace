@@ -156,13 +156,13 @@ const README=[
   ["Counters","Skills mastered, skills pending, guided exercises done, challenges passed, and projects passed out of 6."],
   ["Levels","One bar per level showing mastered skills. A level reads Complete when every skill is Mastered and its project has passed, otherwise a count or Locked."],
   ["Recent activity","The last 8 things you did: demos viewed, attempts, assessment results, logged sessions. It fills in automatically."]]],
- ["path","Learning Path","The whole curriculum in order, with what each level asks of you.",[
+ ["path","Learning path","The whole curriculum in order, with what each level asks of you.",[
   ["Level cards","Each card lists the level's skills with a one-line objective and a status label, plus the level project."],
   ["Locking","Level 1 is open. Each later level opens when every skill in the level before is Mastered and that level's project has passed. Inside an open level you may take skills in any order; the listed order is the recommended one."],
-  ["Practise / Revisit","Opens that skill in the Practice Lab at the stage you have reached. Completed skills stay open for revisiting."],
+  ["Practise / Revisit","Opens that skill on the Learn page at the stage you have reached. Completed skills stay open for revisiting."],
   ["How this level is assessed","Expand it to see the six check questions and the evidence the level requires."],
   ["Capstone row","Shows whether the final challenge is locked, open or passed."]]],
- ["lab","Practice Lab","Where you do the work, one skill at a time, in three steps. Pick a skill from the list on the left; the dot beside it shows its status.",[
+ ["lab","Practice","Where you do the work, one skill at a time, in three steps. Pick a skill from the learning path on the left; the dot beside it shows its status.",[
   ["1 Learn & practise","A real use case for the skill: the situation, a weak prompt and what Claude typically gives back, a better prompt and what you get instead, and the parts that made the difference. Then you rewrite a weak starter prompt for a new case, right below, and press Check my prompt. Passing means you have practised the skill."],
   ["2 Challenge","A harder case with no starter: you write the whole prompt. Passing means you can apply the skill on your own."],
   ["3 Check in Claude","The only step that uses real Claude output. Copy your challenge prompt, paste it into claude.ai (or press Run it here if live runs are on), and paste Claude's reply into the box. Then answer six yes/no questions about that reply, each with a How to check line. To pass: Yes to Correctness and to at least 5 of the 6, with nothing ticked under Did any of these happen. Passing makes the skill Mastered. Anything you answer No to is named as the thing to fix."],
@@ -177,11 +177,11 @@ const README=[
   ["Passing a project","Tick every checklist item and test case (only after you have really done them), add evidence, then answer the six yes/no questions about your project: Yes to Correctness and to at least 5 of the 6. The project is needed to complete its level."],
   ["Capstone","Opens once all five levels are complete. You get a problem and no solution. Write what you did for each of the 9 steps (at least 40 characters each), then answer Yes or No for each step. You pass with at least 8 of the 9."],
   ["If the capstone fails","Any step you answer No to produces a list of the specific skills behind it, each with a Practise button. You go back only to those."]]],
- ["skills","Skills","A table of all "+ALL.length+" skills, each tracked on its own.",[
+ ["skills","All skills","A table of all "+ALL.length+" skills, each tracked on its own.",[
   ["Columns","Status, total attempts, latest assessment result, the start of your evidence, last practised date, and the next recommended action."],
   ["Statuses","Not Started: nothing done. Learning: demo viewed or an attempt made. Practising: guided exercise passed. Assessment Pending: challenge passed. Mastered: assessment passed with evidence."],
   ["Filter","Show only one status, for example everything still Assessment Pending."],
-  ["Open","Jumps to that skill in the Practice Lab."]]],
+  ["Open","Jumps to that skill on the Learn page."]]],
  ["evidence","Evidence","Your record of work and your backups.",[
   ["Mastery status","States exactly what is still missing. Claude Mastery Demonstrated appears only when all skills are Mastered, all 5 projects have passed and the capstone has passed."],
   ["Log a learning session","Record what you learned, why it matters, how you practised, the result, a confidence rating from 1 to 5, what is unclear and your next action. The first and third fields are required. Confidence is for reflection only and never changes a status."],
